@@ -1,0 +1,5 @@
+{
+  "name": "PolyKart Racing",
+  "description": "A 3D arcade racing game inspired by KartRider. Features a third-person camera, a custom winding track, and lap timing mechanics using React Three Fiber.",
+  "requestFramePermissions": []
+}
