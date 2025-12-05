@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -171,6 +172,7 @@ export const Car: React.FC = () => {
     const relevantChunks = chunks.filter(c => Math.abs(c.id - playerChunkIndex) <= 1);
     
     let minDistance = Infinity;
+    let closestPoint = new THREE.Vector3();
     let activeChunkId = playerChunkIndex;
     let progressInChunk = 0; 
 
@@ -188,7 +190,8 @@ export const Car: React.FC = () => {
             
             if (d < minDistance) {
                 minDistance = d;
-                if (d < TRACK_WIDTH / 2 + 5) {
+                closestPoint = flatP;
+                if (d < TRACK_WIDTH / 2 + 10) { // Broad phase
                     activeChunkId = chunk.id;
                     progressInChunk = t;
                 }
@@ -242,11 +245,27 @@ export const Car: React.FC = () => {
         });
     }
 
-    if (minDistance > TRACK_WIDTH / 2 && position.current.y < 1) {
-        speed.current *= (1 - OFF_ROAD_FRICTION);
+    // 4. Wall Collision (Bounds check)
+    // Track Width is total width. Half width is center to wall.
+    // Car width is approx 1. So allowed distance is HalfWidth - 1.
+    const allowedDist = (TRACK_WIDTH / 2) - 1.0; 
+    
+    if (minDistance > allowedDist && position.current.y < 2) {
+        // We hit the wall
+        
+        // 1. Calculate direction from closest track point to car
+        const pushDir = currentPos.clone().sub(closestPoint).normalize();
+        
+        // 2. Clamp position to edge
+        const clampedPos = closestPoint.clone().add(pushDir.multiplyScalar(allowedDist));
+        position.current.x = clampedPos.x;
+        position.current.z = clampedPos.z;
+
+        // 3. Friction penalty for scraping wall
+        speed.current *= 0.95; 
     }
 
-    // 4. Move Car
+    // 5. Move Car
     const velocity = new THREE.Vector3(0, 0, 1)
       .applyAxisAngle(new THREE.Vector3(0, 1, 0), rotation.current)
       .multiplyScalar(speed.current);
@@ -257,7 +276,7 @@ export const Car: React.FC = () => {
     setGameSpeed(speed.current);
     setCarPosition(position.current.x, position.current.z, activeChunkId, progressInChunk);
 
-    // 5. Update Ref
+    // 6. Update Ref
     group.current.position.copy(position.current);
     group.current.rotation.y = rotation.current;
     
@@ -270,7 +289,7 @@ export const Car: React.FC = () => {
     const leanAngle = (controls.left ? 1 : controls.right ? -1 : 0) * (speed.current * driftLean); 
     group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, -leanAngle, 0.1);
 
-    // 6. Camera
+    // 7. Camera
     const isBoosting = boostTimer > 0;
     const boostCamDist = isBoosting ? -12 : -8;
     

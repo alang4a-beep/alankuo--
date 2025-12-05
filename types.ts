@@ -1,6 +1,7 @@
+
 import { Vector3 } from 'three';
 
-export const TRACK_WIDTH = 12;
+export const TRACK_WIDTH = 20; // Widened from 12 to 20
 export const MAX_SPEED = 0.4; // Approx 80km/h
 export const ACCELERATION = 0.006;
 export const BRAKING = 0.02;

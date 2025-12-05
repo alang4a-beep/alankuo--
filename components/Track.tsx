@@ -1,3 +1,4 @@
+
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -90,18 +91,18 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
     return new THREE.CatmullRomCurve3(data.controlPoints, false, 'catmullrom', 0.5);
   }, [data.controlPoints]);
 
-  const { roadGeometry, leftKerbGeometry, rightKerbGeometry } = useMemo(() => {
+  const { roadGeometry, leftWallGeometry, rightWallGeometry } = useMemo(() => {
     const pointsCount = 60; // Resolution per chunk
     const roadPositions: number[] = [];
     const roadIndices: number[] = [];
     
-    const leftKerbPositions: number[] = [];
-    const leftKerbIndices: number[] = [];
+    const leftWallPositions: number[] = [];
+    const leftWallIndices: number[] = [];
     
-    const rightKerbPositions: number[] = [];
-    const rightKerbIndices: number[] = [];
+    const rightWallPositions: number[] = [];
+    const rightWallIndices: number[] = [];
 
-    const kerbWidth = 0.8;
+    const wallHeight = 1.5;
     const halfWidth = TRACK_WIDTH / 2;
 
     for (let i = 0; i <= pointsCount; i++) {
@@ -123,23 +124,18 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
         roadPositions.push(leftEdge.x, leftEdge.y, leftEdge.z);
         roadPositions.push(rightEdge.x, rightEdge.y, rightEdge.z);
 
-        // Kerbs
-        const kerbY = yOffset + 0.01;
-        const leftKerbOuter = new THREE.Vector3().copy(point).sub(side.clone().multiplyScalar(halfWidth + kerbWidth));
-        leftKerbOuter.y = kerbY;
-        const leftKerbInner = new THREE.Vector3().copy(leftEdge);
-        leftKerbInner.y = kerbY;
+        // Walls (Vertical planes rising from edges)
+        // Left Wall
+        const leftWallTop = leftEdge.clone();
+        leftWallTop.y += wallHeight;
+        leftWallPositions.push(leftEdge.x, leftEdge.y, leftEdge.z);
+        leftWallPositions.push(leftWallTop.x, leftWallTop.y, leftWallTop.z);
 
-        leftKerbPositions.push(leftKerbOuter.x, leftKerbOuter.y, leftKerbOuter.z);
-        leftKerbPositions.push(leftKerbInner.x, leftKerbInner.y, leftKerbInner.z);
-
-        const rightKerbInner = new THREE.Vector3().copy(rightEdge);
-        rightKerbInner.y = kerbY;
-        const rightKerbOuter = new THREE.Vector3().copy(point).add(side.clone().multiplyScalar(halfWidth + kerbWidth));
-        rightKerbOuter.y = kerbY;
-
-        rightKerbPositions.push(rightKerbInner.x, rightKerbInner.y, rightKerbInner.z);
-        rightKerbPositions.push(rightKerbOuter.x, rightKerbOuter.y, rightKerbOuter.z);
+        // Right Wall
+        const rightWallTop = rightEdge.clone();
+        rightWallTop.y += wallHeight;
+        rightWallPositions.push(rightEdge.x, rightEdge.y, rightEdge.z);
+        rightWallPositions.push(rightWallTop.x, rightWallTop.y, rightWallTop.z);
 
         if (i > 0) {
             const currentLeft = i * 2;
@@ -147,14 +143,19 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
             const prevLeft = (i - 1) * 2;
             const prevRight = (i - 1) * 2 + 1;
 
-            const addQuad = (indices: number[]) => {
-                indices.push(prevLeft, prevRight, currentLeft);
-                indices.push(currentLeft, prevRight, currentRight);
+            const addQuad = (indices: number[], reverse = false) => {
+                if (reverse) {
+                    indices.push(currentLeft, prevRight, prevLeft);
+                    indices.push(currentRight, prevRight, currentLeft);
+                } else {
+                    indices.push(prevLeft, prevRight, currentLeft);
+                    indices.push(currentLeft, prevRight, currentRight);
+                }
             };
 
             addQuad(roadIndices);
-            addQuad(leftKerbIndices);
-            addQuad(rightKerbIndices);
+            addQuad(leftWallIndices); // Standard winding
+            addQuad(rightWallIndices, true); // Reverse winding for right wall to face inward
         }
     }
 
@@ -168,8 +169,8 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
 
     return {
         roadGeometry: makeGeo(roadPositions, roadIndices),
-        leftKerbGeometry: makeGeo(leftKerbPositions, leftKerbIndices),
-        rightKerbGeometry: makeGeo(rightKerbPositions, rightKerbIndices)
+        leftWallGeometry: makeGeo(leftWallPositions, leftWallIndices),
+        rightWallGeometry: makeGeo(rightWallPositions, rightWallIndices)
     };
   }, [curve]);
 
@@ -208,12 +209,14 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
       <mesh geometry={roadGeometry} receiveShadow castShadow>
         <meshStandardMaterial color="#1a1a1a" roughness={0.8} side={THREE.DoubleSide} />
       </mesh>
-      <mesh geometry={leftKerbGeometry} receiveShadow>
-        <meshStandardMaterial color="#cc0000" roughness={0.5} />
+      {/* Walls */}
+      <mesh geometry={leftWallGeometry} receiveShadow castShadow>
+        <meshStandardMaterial color="#cc0000" roughness={0.5} side={THREE.DoubleSide} />
       </mesh>
-      <mesh geometry={rightKerbGeometry} receiveShadow>
-         <meshStandardMaterial color="#ffffff" roughness={0.5} />
+      <mesh geometry={rightWallGeometry} receiveShadow castShadow>
+         <meshStandardMaterial color="#ffffff" roughness={0.5} side={THREE.DoubleSide} />
       </mesh>
+      
       {arrows.map((arrow) => (
           <group key={arrow.key} position={arrow.position} rotation={arrow.rotation}>
              <mesh>

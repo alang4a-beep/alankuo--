@@ -16,19 +16,32 @@ const TouchControls = () => {
         window.dispatchEvent(event);
     };
 
-    const handleTouch = (key: string, active: boolean) => (e: React.TouchEvent | React.MouseEvent) => {
-        e.preventDefault(); // Prevent ghost clicks
-        triggerKey(key, active ? 'keydown' : 'keyup');
+    const handlePointerDown = (key: string) => (e: React.PointerEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerKey(key, 'keydown');
+    };
+
+    const handlePointerUp = (key: string) => (e: React.PointerEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerKey(key, 'keyup');
     };
 
     const Btn = ({ k, label, className }: { k: string, label: string, className: string }) => (
         <button
-            className={`select-none touch-manipulation active:scale-95 transition-transform bg-white/20 backdrop-blur-md border border-white/30 rounded-full flex items-center justify-center text-white font-bold shadow-lg active:bg-white/40 ${className}`}
-            onMouseDown={handleTouch(k, true)}
-            onMouseUp={handleTouch(k, false)}
-            onMouseLeave={handleTouch(k, false)}
-            onTouchStart={handleTouch(k, true)}
-            onTouchEnd={handleTouch(k, false)}
+            className={`select-none touch-none active:scale-95 transition-transform bg-white/20 backdrop-blur-md border border-white/30 rounded-full flex items-center justify-center text-white font-bold shadow-lg active:bg-white/40 ${className}`}
+            style={{ 
+                touchAction: 'none', 
+                WebkitUserSelect: 'none', 
+                userSelect: 'none',
+                WebkitTouchCallout: 'none' 
+            }}
+            onPointerDown={handlePointerDown(k)}
+            onPointerUp={handlePointerUp(k)}
+            onPointerLeave={handlePointerUp(k)} // Release if sliding off
+            onPointerCancel={handlePointerUp(k)} // Release if interrupted
+            onContextMenu={(e) => e.preventDefault()} // Prevent context menu
         >
             {label}
         </button>
@@ -201,7 +214,7 @@ function HUD() {
         )}
       </div>
 
-      {/* Touch Controls (Mobile Only - visible by default but CSS/JS logic could hide on desktop if needed, currently shown always for demo) */}
+      {/* Touch Controls (Mobile Only) */}
       {status === GameStatus.RACING && <TouchControls />}
 
       {/* Speedometer - Repositioned to Bottom Center to accommodate touch controls */}
