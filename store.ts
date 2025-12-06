@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { Vector3, CatmullRomCurve3 } from 'three';
 import { 
@@ -13,8 +14,10 @@ import {
   TRACK_WIDTH,
   ItemBoxData,
   ObstacleData,
-  ObstacleType
+  ObstacleType,
+  Competitor
 } from './types';
+import { soundManager } from './audio';
 
 // Question Bank
 const QUESTIONS: QuizQuestion[] = [
@@ -43,6 +46,9 @@ interface GameState {
   penaltyTimer: number; // > 0 means active
   feedbackMessage: string | null;
   
+  // Competitors
+  competitors: Competitor[];
+
   // Actions
   startGame: () => void;
   resetGame: () => void;
@@ -52,7 +58,9 @@ interface GameState {
   answerQuestion: (isCorrect: boolean) => void;
   collectItem: (chunkId: number, boxId: string) => void;
   collectCoin: (chunkId: number, obsId: string) => void;
+  destroyObstacle: (chunkId: number, obsId: string) => void;
   tickTimers: () => void; // Call every frame
+  updateCompetitors: (dt: number) => void;
 }
 
 let nextChunkId = 0;
@@ -64,19 +72,15 @@ const getRandomQuestion = (): QuizQuestion => {
 
 // Check if a set of points collides with existing track chunks
 const checkCollision = (points: Vector3[], history: TrackChunkData[]): boolean => {
-    // Only check against chunks that are not immediate neighbors
-    // e.g. if we are generating chunk 10, we ignore 9 and 8. We check 0..7.
-    // Also limit check to last 50 chunks for performance
     if (history.length < 5) return false;
     
     const endIdx = history.length - 2;
     const startIdx = Math.max(0, history.length - 50);
-    const SAFE_DISTANCE = TRACK_WIDTH * 2; // 24 units
+    const SAFE_DISTANCE = TRACK_WIDTH * 2; 
 
     for (let i = startIdx; i < endIdx; i++) {
         const chunk = history[i];
         for (const p1 of points) {
-            // Check against control points of previous chunks
             for (const p2 of chunk.controlPoints) {
                 if (p1.distanceTo(p2) < SAFE_DISTANCE) {
                     return true;
@@ -90,52 +94,50 @@ const checkCollision = (points: Vector3[], history: TrackChunkData[]): boolean =
 const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChunkData[]): TrackChunkData => {
   const id = nextChunkId++;
   const isQuizChunk = id > 4 && id % 10 === 0;
+  const isPreQuizChunk = (id + 1) > 4 && (id + 1) % 10 === 0;
 
-  // 1. Determine Type & Geometry with Collision Avoidance
+  // 1. Determine Type & Geometry
   let type = ChunkType.STRAIGHT;
   let points: Vector3[] = [];
   let currentPos = new Vector3(0,0,0);
   let currentAngle = 0;
   let startPoint = new Vector3(0,0,0);
   let startAngle = 0;
+  let angleDeltaPerSeg = 0;
+  const segments = 5;
+  const segmentLength = CHUNK_LENGTH / segments;
 
   if (prevChunk) {
       startPoint = prevChunk.endPoint.clone();
       startAngle = prevChunk.endAngle;
   }
 
-  // Geometry Generator Helper
   const generateGeometry = (testType: ChunkType) => {
       const pts: Vector3[] = [startPoint];
-      const segments = 5;
-      const segmentLength = CHUNK_LENGTH / segments;
       let angle = startAngle;
       let pos = startPoint.clone();
+      let dAngle = 0;
+
+      if (testType === ChunkType.LEFT) dAngle = 0.15;
+      if (testType === ChunkType.RIGHT) dAngle = -0.15;
+      if (testType === ChunkType.U_TURN_LEFT) dAngle = 0.5;
+      if (testType === ChunkType.U_TURN_RIGHT) dAngle = -0.5;
 
       for (let i = 1; i <= segments; i++) {
-          let angleChange = 0;
-          if (testType === ChunkType.LEFT) angleChange = 0.15;
-          if (testType === ChunkType.RIGHT) angleChange = -0.15;
-          if (testType === ChunkType.U_TURN_LEFT) angleChange = 0.5;
-          if (testType === ChunkType.U_TURN_RIGHT) angleChange = -0.5;
-
-          angle += angleChange;
+          angle += dAngle;
           const dx = Math.sin(angle) * segmentLength;
           const dz = Math.cos(angle) * segmentLength;
           pos = new Vector3(pos.x + dx, 0, pos.z + dz);
           pts.push(pos.clone());
       }
-      return { pts, finalPos: pos, finalAngle: angle };
+      return { pts, finalPos: pos, finalAngle: angle, dAngle };
   };
 
-  // Select Candidate Types
   let candidates: ChunkType[] = [];
   
-  if (!prevChunk || isQuizChunk) {
+  if (!prevChunk || isQuizChunk || isPreQuizChunk) {
       candidates = [ChunkType.STRAIGHT];
   } else {
-      // Logic for random selection
-      // Check U-Turn Cooldown (prevent spiraling)
       let lastUTurnId = -100;
       for (let i = existingChunks.length - 1; i >= 0; i--) {
           if (existingChunks[i].type === ChunkType.U_TURN_LEFT || existingChunks[i].type === ChunkType.U_TURN_RIGHT) {
@@ -155,12 +157,10 @@ const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChun
       else preferred = ChunkType.STRAIGHT;
 
       candidates.push(preferred);
-      // Fallbacks if preferred collides
       if (preferred !== ChunkType.STRAIGHT) candidates.push(ChunkType.STRAIGHT);
       if (preferred !== ChunkType.LEFT && preferred !== ChunkType.RIGHT) candidates.push(ChunkType.LEFT);
   }
 
-  // Attempt generation
   let success = false;
   for (const candidate of candidates) {
       const result = generateGeometry(candidate);
@@ -169,28 +169,46 @@ const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChun
           points = result.pts;
           currentPos = result.finalPos;
           currentAngle = result.finalAngle;
+          angleDeltaPerSeg = result.dAngle;
           success = true;
           break;
       }
   }
 
-  // Fail-safe: If all collided, force Straight (it usually punches through)
   if (!success) {
       const result = generateGeometry(ChunkType.STRAIGHT);
       type = ChunkType.STRAIGHT;
       points = result.pts;
       currentPos = result.finalPos;
       currentAngle = result.finalAngle;
+      angleDeltaPerSeg = 0;
   }
 
-  // Temporary curve to calculate positions for items
+  // --- Ghost Point Calculation ---
+  let ghostStart: Vector3;
+  if (prevChunk && prevChunk.controlPoints.length >= 2) {
+      ghostStart = prevChunk.controlPoints[prevChunk.controlPoints.length - 2].clone();
+  } else {
+      const dx = Math.sin(startAngle) * segmentLength;
+      const dz = Math.cos(startAngle) * segmentLength;
+      ghostStart = startPoint.clone().sub(new Vector3(dx, 0, dz));
+  }
+
+  const ghostEndAngle = currentAngle + angleDeltaPerSeg;
+  const gdx = Math.sin(ghostEndAngle) * segmentLength;
+  const gdz = Math.cos(ghostEndAngle) * segmentLength;
+  const ghostEnd = currentPos.clone().add(new Vector3(gdx, 0, gdz));
+
+  const renderPoints = [ghostStart, ...points, ghostEnd];
+  
+  // --------------------------------------------------
+
   const curve = new CatmullRomCurve3(points, false, 'catmullrom', 0.5);
 
   const items: ItemBoxData[] = [];
   const obstacles: ObstacleData[] = [];
   let assignedQuestion: QuizQuestion | undefined;
 
-  // 1. Generate Quiz Items
   if (isQuizChunk) {
       assignedQuestion = getRandomQuestion();
       
@@ -200,6 +218,7 @@ const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChun
       const tangent = curve.getTangentAt(t).normalize();
       const up = new Vector3(0, 1, 0);
       const side = new Vector3().crossVectors(up, tangent).normalize();
+      
       const spacing = TRACK_WIDTH / 3;
 
       items.push({
@@ -224,11 +243,9 @@ const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChun
           isCollected: false
       });
   } 
-  // 2. Generate Obstacles (Coins, Crates, Ramps) if NOT a quiz chunk
   else if (id > 2) { 
       const rand = Math.random();
       
-      // Helper to get orientation
       const getPosAndRot = (t: number, offset: number) => {
           const pt = curve.getPointAt(t);
           const tan = curve.getTangentAt(t).normalize();
@@ -242,8 +259,8 @@ const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChun
           };
       };
 
-      // A. Ramps (15% chance)
-      if (rand < 0.15) {
+      // Ensure ramps only appear on straight sections
+      if (rand < 0.15 && type === ChunkType.STRAIGHT) {
           const { pos, rot, tangent } = getPosAndRot(0.5, 0);
           obstacles.push({
               id: `${id}-ramp`,
@@ -252,7 +269,6 @@ const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChun
               rotation: rot
           });
 
-          // Reward Coins in the air above the ramp
           for(let i=0; i<3; i++) {
               const distForward = 4 + (i * 2.5);
               const height = 3.5 + Math.sin(i * 1.5) * 1.5;
@@ -268,41 +284,13 @@ const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChun
               });
           }
       }
-      // B. Crates (20% chance)
-      else if (rand < 0.35) {
-          const side = Math.random() > 0.5 ? -1 : 1;
-          const offset = (TRACK_WIDTH / 4) * side;
-          
-          for(let k=0; k<3; k++) {
-              const t = 0.4 + (k * 0.05);
-              const { pos, rot } = getPosAndRot(t, offset);
-              obstacles.push({
-                  id: `${id}-crate-${k}`,
-                  type: ObstacleType.CRATE,
-                  position: pos,
-                  rotation: rot
-              });
-              if (k === 1) {
-                   const { pos: pos2 } = getPosAndRot(t, offset * 0.5);
-                   obstacles.push({
-                       id: `${id}-crate-inner`,
-                       type: ObstacleType.CRATE,
-                       position: pos2,
-                       rotation: rot
-                   });
-              }
-          }
-      }
-      // C. Coins (Remaining chance)
       else if (rand < 0.75) {
            const pattern = Math.random();
            for(let k=0; k<5; k++) {
                const t = 0.3 + (k * 0.1);
                const offset = pattern > 0.5 ? 0 : Math.sin(k) * 3; 
                const { pos, rot } = getPosAndRot(t, offset);
-               
-               pos.y = 0.6; // Lift off floor
-
+               pos.y = 0.6;
                obstacles.push({
                    id: `${id}-coin-${k}`,
                    type: ObstacleType.COIN,
@@ -322,6 +310,7 @@ const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChun
     startAngle,
     endAngle: currentAngle,
     controlPoints: points,
+    renderPoints,
     items,
     obstacles,
     assignedQuestion
@@ -343,19 +332,29 @@ export const useGameStore = create<GameState>((set, get) => ({
   penaltyTimer: 0,
   feedbackMessage: null,
 
+  competitors: [],
+
   generateInitialTrack: () => {
     nextChunkId = 0;
     const chunks: TrackChunkData[] = [];
     let prev: TrackChunkData | null = null;
     
-    // First chunk (Straight Start)
-    // We pass empty array for history since it's the first
+    // First chunk
     const first = createChunk(null, []);
-    // Override first chunk to be perfectly straight and clean
     first.type = ChunkType.STRAIGHT; 
     first.endPoint = new Vector3(0, 0, CHUNK_LENGTH);
     first.endAngle = 0;
     first.controlPoints = [new Vector3(0,0,0), new Vector3(0,0, CHUNK_LENGTH)];
+    
+    const startP = new Vector3(0,0,0);
+    const endP = new Vector3(0,0, CHUNK_LENGTH);
+    first.renderPoints = [
+        new Vector3(0,0,-CHUNK_LENGTH),
+        startP,
+        endP,
+        new Vector3(0,0, CHUNK_LENGTH*2)
+    ];
+
     first.items = []; 
     first.obstacles = [];
     chunks.push(first);
@@ -363,17 +362,34 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     for (let i = 0; i < CHUNKS_TO_RENDER; i++) {
       const next = createChunk(prev, chunks);
+      
+      if (prev && prev.renderPoints && next.controlPoints.length > 1) {
+          prev.renderPoints[prev.renderPoints.length - 1] = next.controlPoints[1].clone();
+      }
+
       chunks.push(next);
       prev = next;
     }
 
-    set({ chunks, playerChunkIndex: 0, boostTimer: 0, penaltyTimer: 0, bonusScore: 0 });
+    set({ chunks, playerChunkIndex: 0, boostTimer: 0, penaltyTimer: 0, bonusScore: 0, competitors: [] });
   },
 
   startGame: () => {
     const { chunks } = get();
     if (chunks.length === 0) get().generateInitialTrack();
     
+    soundManager.resume();
+    soundManager.startMusic();
+    soundManager.startEngine();
+    soundManager.playSfx('boost');
+
+    // Spawn 3 initial competitors with speeds between 70km/h (0.35) and 110km/h (0.55)
+    const newCompetitors: Competitor[] = [
+        { id: 'bot-1', chunkId: 0, progress: 0.8, laneOffset: -5, speed: 0.35, color: '#ff0000', modelOffset: 0 }, // 70 km/h
+        { id: 'bot-2', chunkId: 0, progress: 0.6, laneOffset: 5, speed: 0.45, color: '#00ff00', modelOffset: 1 },  // 90 km/h
+        { id: 'bot-3', chunkId: 1, progress: 0.2, laneOffset: 0, speed: 0.50, color: '#ffff00', modelOffset: 2 }   // 100 km/h
+    ];
+
     set({ 
       status: GameStatus.RACING, 
       score: 0,
@@ -382,11 +398,15 @@ export const useGameStore = create<GameState>((set, get) => ({
       boostTimer: 0,
       penaltyTimer: 0,
       feedbackMessage: null,
+      competitors: newCompetitors
     });
   },
 
   resetGame: () => {
     get().generateInitialTrack();
+    soundManager.stopEngine();
+    soundManager.startMusic();
+    
     set({ 
       status: GameStatus.IDLE, 
       score: 0,
@@ -396,7 +416,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       playerChunkIndex: 0,
       boostTimer: 0,
       penaltyTimer: 0,
-      feedbackMessage: null
+      feedbackMessage: null,
+      competitors: []
     });
   },
 
@@ -411,12 +432,15 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   answerQuestion: (isCorrect) => {
       if (isCorrect) {
+          soundManager.playSfx('correct');
+          soundManager.playSfx('boost');
           set({ 
               boostTimer: EFFECT_DURATION, 
               penaltyTimer: 0,
               feedbackMessage: "CORRECT! NITRO BOOST!",
           });
       } else {
+          soundManager.playSfx('wrong');
           set({ 
               boostTimer: 0, 
               penaltyTimer: EFFECT_DURATION,
@@ -447,6 +471,8 @@ export const useGameStore = create<GameState>((set, get) => ({
           const obs = chunk.obstacles.find(o => o.id === obsId);
           if (!obs || obs.isCollected) return {};
 
+          soundManager.playSfx('coin');
+
           const newChunks = state.chunks.map(c => {
               if (c.id !== chunkId) return c;
               return {
@@ -462,23 +488,82 @@ export const useGameStore = create<GameState>((set, get) => ({
       });
   },
   
+  destroyObstacle: (chunkId, obsId) => {
+      set(state => {
+          const newChunks = state.chunks.map(c => {
+              if (c.id !== chunkId) return c;
+              return {
+                  ...c,
+                  obstacles: c.obstacles.map(o => o.id === obsId ? { ...o, isCollected: true } : o)
+              };
+          });
+          return { chunks: newChunks };
+      });
+  },
+  
+  updateCompetitors: (dt: number) => {
+      set(state => {
+          if (state.status !== GameStatus.RACING) return {};
+          
+          let newCompetitors = [...state.competitors];
+          
+          // Remove competitors too far behind
+          newCompetitors = newCompetitors.filter(c => c.chunkId >= state.playerChunkIndex - 1);
+
+          // Spawn new ones if needed (maintain at least 3 ahead)
+          const aheadCount = newCompetitors.filter(c => c.chunkId > state.playerChunkIndex).length;
+          if (aheadCount < 3) {
+              const id = Math.random().toString(36).substr(2, 5);
+              const chunkId = state.playerChunkIndex + 4; // Spawn 4 chunks ahead
+              newCompetitors.push({
+                  id: `bot-${id}`,
+                  chunkId: chunkId,
+                  progress: 0,
+                  laneOffset: (Math.random() * TRACK_WIDTH) - (TRACK_WIDTH/2),
+                  // Random speed 0.35 (70kmh) to 0.55 (110kmh)
+                  speed: 0.35 + (Math.random() * 0.20), 
+                  color: '#' + Math.floor(Math.random()*16777215).toString(16),
+                  modelOffset: Math.floor(Math.random() * 3)
+              });
+          }
+
+          // Move them
+          newCompetitors = newCompetitors.map(c => {
+              let nextProgress = c.progress + (c.speed * dt * 30 / CHUNK_LENGTH); // Approximate frame diff
+              let nextChunkId = c.chunkId;
+              
+              if (nextProgress >= 1) {
+                  nextProgress -= 1;
+                  nextChunkId += 1;
+              }
+              
+              return { ...c, progress: nextProgress, chunkId: nextChunkId };
+          });
+          
+          return { competitors: newCompetitors };
+      });
+  },
+
   setCarPosition: (x, z, chunkIndex, progressInChunk) => {
     const { chunks, playerChunkIndex, bestScore, bonusScore } = get();
-    
-    // Distance score + Bonus Score
     const distScore = Math.floor((chunkIndex * CHUNK_LENGTH) + (progressInChunk * CHUNK_LENGTH));
     const totalScore = distScore + bonusScore;
     
     let newChunks = chunks;
     let newPlayerChunkIndex = playerChunkIndex;
 
-    // Extend track if player is advancing
     if (chunkIndex > playerChunkIndex) {
         newPlayerChunkIndex = chunkIndex;
         const lastChunk = chunks[chunks.length - 1];
-        // Pass current chunks to allow collision checking
         const next = createChunk(lastChunk, chunks);
-        newChunks = [...chunks, next];
+
+        const updatedLastChunk = { ...lastChunk, renderPoints: [...(lastChunk.renderPoints || [])] };
+        
+        if (updatedLastChunk.renderPoints.length > 0 && next.controlPoints.length > 1) {
+             updatedLastChunk.renderPoints[updatedLastChunk.renderPoints.length - 1] = next.controlPoints[1].clone();
+        }
+
+        newChunks = [...chunks.slice(0, -1), updatedLastChunk, next];
     }
 
     let nextQuizChunk = newChunks.find(c => c.id >= chunkIndex && c.assignedQuestion && c.items.some(i => !i.isCollected));

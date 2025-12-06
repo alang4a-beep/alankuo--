@@ -3,9 +3,11 @@ import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Track } from './components/Track';
 import { Car } from './components/Car';
+import { Competitors } from './components/Competitors';
 import { EnvironmentWrapper } from './components/Environment';
 import { useGameStore } from './store';
 import { GameStatus } from './types';
+import { soundManager } from './audio';
 import * as THREE from 'three';
 
 // --- Touch Controls Component ---
@@ -125,6 +127,13 @@ function HUD() {
       currentQuestion, feedbackMessage, boostTimer, penaltyTimer 
   } = useGameStore();
 
+  const [isMuted, setIsMuted] = useState(soundManager.getMuteState());
+
+  const toggleSound = () => {
+    const muted = soundManager.toggleMute();
+    setIsMuted(muted);
+  };
+
   const currentSpeedKmH = Math.floor(Math.abs(speed * 200));
   // 120 is the new theoretical max with boost (80 * 1.5)
   const speedPercent = Math.min(100, (currentSpeedKmH / 120) * 100);
@@ -152,8 +161,21 @@ function HUD() {
         </div>
       )}
 
-      {/* Top Right: Score */}
+      {/* Top Right: Score & Settings */}
       <div className="absolute top-6 right-6 flex flex-col items-end font-mono text-white gap-2 z-10">
+        
+        {/* Mute Button */}
+        <button 
+            onClick={toggleSound}
+            className="pointer-events-auto bg-black/50 hover:bg-black/80 p-2 rounded-full border border-white/20 mb-2 transition-colors"
+        >
+            {isMuted ? (
+                <span className="text-red-400 text-xl">🔇</span>
+            ) : (
+                <span className="text-green-400 text-xl">🔊</span>
+            )}
+        </button>
+
         <div className="bg-black/70 p-2 md:p-4 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col items-end shadow-lg min-w-[100px] md:min-w-[150px]">
           <div className="text-[10px] md:text-sm text-gray-400">DISTANCE</div>
           <div className="text-2xl md:text-4xl font-bold text-yellow-400">
@@ -249,6 +271,12 @@ function HUD() {
   );
 }
 
+const Loader = () => (
+    <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a] z-50">
+        <div className="text-white font-bold animate-pulse">LOADING TRACK...</div>
+    </div>
+)
+
 const App: React.FC = () => {
   return (
     <div className="w-full h-full relative bg-gray-900 select-none">
@@ -257,6 +285,7 @@ const App: React.FC = () => {
         <Suspense fallback={null}>
           <EnvironmentWrapper />
           <Track />
+          <Competitors />
           <Car />
         </Suspense>
       </Canvas>

@@ -66,9 +66,20 @@ export interface TrackChunkData {
   startAngle: number;
   endAngle: number;
   controlPoints: Vector3[];
+  renderPoints?: Vector3[]; // Extended points including ghosts for seamless rendering
   items: ItemBoxData[]; // Quiz Boxes
   obstacles: ObstacleData[]; // Coins, Crates, Ramps
   assignedQuestion?: QuizQuestion; 
+}
+
+export interface Competitor {
+    id: string;
+    chunkId: number;
+    progress: number; // 0 to 1 along the chunk
+    laneOffset: number; // -TRACK_WIDTH/2 to TRACK_WIDTH/2
+    speed: number;
+    color: string;
+    modelOffset: number; // Random variation in mesh
 }
 
 export enum GameStatus {

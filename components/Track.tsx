@@ -1,5 +1,5 @@
 
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, Suspense } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Text } from '@react-three/drei';
@@ -29,46 +29,22 @@ const Coin: React.FC<{ position: THREE.Vector3 }> = ({ position }) => {
     );
 };
 
-// Crate Component - Scaled down
-const Crate: React.FC<{ position: THREE.Vector3; rotation: number }> = ({ position, rotation }) => {
-    return (
-        <mesh position={[position.x, 0.4, position.z]} rotation={[0, rotation, 0]} castShadow>
-            {/* Reduced from args=[2,2,2] to [0.8,0.8,0.8] approx 70% reduction in volume/impact */}
-            <boxGeometry args={[0.8, 0.8, 0.8]} />
-            <meshStandardMaterial color="#8B4513" roughness={0.9} />
-            {/* Crate border details */}
-            <lineSegments>
-                <edgesGeometry args={[new THREE.BoxGeometry(0.8, 0.8, 0.8)]} />
-                <lineBasicMaterial color="#3e1e05" />
-            </lineSegments>
-        </mesh>
-    );
-};
-
 // Ramp Component
 const Ramp: React.FC<{ position: THREE.Vector3; rotation: number }> = ({ position, rotation }) => {
     return (
         <group position={position} rotation={[0, rotation, 0]}>
-            {/* Main Wedge Body */}
             <mesh position={[0, 0.75, 0]} castShadow receiveShadow>
-                {/* A squashed box rotated to form a ramp */}
                 <boxGeometry args={[4, 0.2, 5]} />
                 <meshStandardMaterial color="#333" roughness={0.6} />
             </mesh>
-            
-            {/* Physical Slope Visual */}
             <mesh position={[0, 0.75, 0]} rotation={[-0.3, 0, 0]}>
                  <boxGeometry args={[4, 1.5, 6]} />
                  <meshStandardMaterial color="#111" />
             </mesh>
-
-            {/* Yellow Top Surface with Stripes */}
             <mesh position={[0, 0.75, 0]} rotation={[Math.PI/10, 0, 0]}> 
                  <boxGeometry args={[3.8, 0.1, 5.5]} />
                  <meshStandardMaterial color="#FFD700" />
             </mesh>
-            
-            {/* Black Chevrons/Stripes on top */}
              <mesh position={[0, 0.8, 1]} rotation={[Math.PI/10, 0, 0]}>
                  <boxGeometry args={[3.8, 0.11, 0.5]} />
                  <meshStandardMaterial color="#000" />
@@ -85,14 +61,32 @@ const Ramp: React.FC<{ position: THREE.Vector3; rotation: number }> = ({ positio
     );
 };
 
+// Safe Text Component that doesn't crash the scene on suspend
+const SafeText: React.FC<any> = (props) => {
+    return (
+        <Suspense fallback={null}>
+            <Text {...props} />
+        </Suspense>
+    )
+}
 
 const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
-  const curve = useMemo(() => {
-    return new THREE.CatmullRomCurve3(data.controlPoints, false, 'catmullrom', 0.5);
-  }, [data.controlPoints]);
+  const { curve, tStart, tEnd } = useMemo(() => {
+    // If renderPoints (with ghosts) are available, use them
+    const points = data.renderPoints || data.controlPoints;
+    const c = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
+    
+    // If using ghosts, we render from index 1 to N-2
+    const len = points.length;
+    const useGhosts = !!data.renderPoints;
+    const tS = useGhosts ? 1 / (len - 1) : 0;
+    const tE = useGhosts ? (len - 2) / (len - 1) : 1;
 
-  const { roadGeometry, leftWallGeometry, rightWallGeometry } = useMemo(() => {
-    const pointsCount = 60; // Resolution per chunk
+    return { curve: c, tStart: tS, tEnd: tE };
+  }, [data.renderPoints, data.controlPoints]);
+
+  const { roadGeometry, leftWallGeometry, rightWallGeometry, startPillars } = useMemo(() => {
+    const pointsCount = 100; // Increased resolution for smoother walls
     const roadPositions: number[] = [];
     const roadIndices: number[] = [];
     
@@ -105,8 +99,14 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
     const wallHeight = 1.5;
     const halfWidth = TRACK_WIDTH / 2;
 
+    let firstLeftEdge: THREE.Vector3 | null = null;
+    let firstRightEdge: THREE.Vector3 | null = null;
+
     for (let i = 0; i <= pointsCount; i++) {
-        const t = i / pointsCount;
+        // Map i (0..count) to t (tStart..tEnd)
+        const percent = i / pointsCount;
+        const t = tStart + percent * (tEnd - tStart);
+
         const point = curve.getPointAt(t);
         const tangent = curve.getTangentAt(t).normalize();
         
@@ -120,18 +120,21 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
         leftEdge.y = yOffset;
         rightEdge.y = yOffset;
 
+        if (i === 0) {
+            firstLeftEdge = leftEdge.clone();
+            firstRightEdge = rightEdge.clone();
+        }
+
         // Road
         roadPositions.push(leftEdge.x, leftEdge.y, leftEdge.z);
         roadPositions.push(rightEdge.x, rightEdge.y, rightEdge.z);
 
         // Walls (Vertical planes rising from edges)
-        // Left Wall
         const leftWallTop = leftEdge.clone();
         leftWallTop.y += wallHeight;
         leftWallPositions.push(leftEdge.x, leftEdge.y, leftEdge.z);
         leftWallPositions.push(leftWallTop.x, leftWallTop.y, leftWallTop.z);
 
-        // Right Wall
         const rightWallTop = rightEdge.clone();
         rightWallTop.y += wallHeight;
         rightWallPositions.push(rightEdge.x, rightEdge.y, rightEdge.z);
@@ -154,8 +157,8 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
             };
 
             addQuad(roadIndices);
-            addQuad(leftWallIndices); // Standard winding
-            addQuad(rightWallIndices, true); // Reverse winding for right wall to face inward
+            addQuad(leftWallIndices);
+            addQuad(rightWallIndices, true);
         }
     }
 
@@ -170,16 +173,19 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
     return {
         roadGeometry: makeGeo(roadPositions, roadIndices),
         leftWallGeometry: makeGeo(leftWallPositions, leftWallIndices),
-        rightWallGeometry: makeGeo(rightWallPositions, rightWallIndices)
+        rightWallGeometry: makeGeo(rightWallPositions, rightWallIndices),
+        startPillars: { left: firstLeftEdge, right: firstRightEdge }
     };
-  }, [curve]);
+  }, [curve, tStart, tEnd]);
 
   const arrows = useMemo(() => {
     const arrowItems = [];
     const count = 5; 
     
     for (let i = 1; i < count; i++) {
-        const t = i / count; 
+        const percent = i / count; 
+        const t = tStart + percent * (tEnd - tStart);
+
         const point = curve.getPointAt(t);
         const tangent = curve.getTangentAt(t).normalize();
         
@@ -195,27 +201,43 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
         });
     }
     return arrowItems;
-  }, [curve]);
+  }, [curve, tStart, tEnd]);
 
-  // Calculate rotation for Quiz items to face the car
   const itemRotation = useMemo(() => {
-      const tangent = curve.getTangentAt(0.5).normalize();
+      // Calculate rotation at center of visible chunk
+      const midT = tStart + 0.5 * (tEnd - tStart);
+      const tangent = curve.getTangentAt(midT).normalize();
       const angle = Math.atan2(tangent.x, tangent.z);
       return new THREE.Euler(0, angle + Math.PI, 0);
-  }, [curve]);
+  }, [curve, tStart, tEnd]);
 
   return (
     <group>
       <mesh geometry={roadGeometry} receiveShadow castShadow>
         <meshStandardMaterial color="#1a1a1a" roughness={0.8} side={THREE.DoubleSide} />
       </mesh>
-      {/* Walls */}
+      
+      {/* Wall Meshes */}
       <mesh geometry={leftWallGeometry} receiveShadow castShadow>
         <meshStandardMaterial color="#cc0000" roughness={0.5} side={THREE.DoubleSide} />
       </mesh>
       <mesh geometry={rightWallGeometry} receiveShadow castShadow>
          <meshStandardMaterial color="#ffffff" roughness={0.5} side={THREE.DoubleSide} />
       </mesh>
+
+      {/* Wall Connector Pillars - Increased size to hide seams */}
+      {startPillars.left && (
+          <mesh position={[startPillars.left.x, 0.75, startPillars.left.z]} castShadow>
+              <cylinderGeometry args={[0.6, 0.6, 1.5, 12]} />
+              <meshStandardMaterial color="#cc0000" roughness={0.5} />
+          </mesh>
+      )}
+      {startPillars.right && (
+          <mesh position={[startPillars.right.x, 0.75, startPillars.right.z]} castShadow>
+              <cylinderGeometry args={[0.6, 0.6, 1.5, 12]} />
+              <meshStandardMaterial color="#ffffff" roughness={0.5} />
+          </mesh>
+      )}
       
       {arrows.map((arrow) => (
           <group key={arrow.key} position={arrow.position} rotation={arrow.rotation}>
@@ -235,32 +257,27 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
           </group>
       ))}
 
-      {/* Render Quiz Items */}
       {data.items.map((item) => (
           !item.isCollected && (
               <group key={item.id} position={item.position} rotation={itemRotation}>
-                  <mesh position={[0, 1.5, 0]} castShadow>
-                      <boxGeometry args={[2, 2, 2]} />
+                  <mesh position={[0, 2, 0]} castShadow>
+                      <boxGeometry args={[6.4, 4, 1]} />
                       <meshStandardMaterial color="#ffcc00" emissive="#ffcc00" emissiveIntensity={0.5} transparent opacity={0.8} />
                   </mesh>
-                  <lineSegments position={[0, 1.5, 0]}>
-                      <edgesGeometry args={[new THREE.BoxGeometry(2, 2, 2)]} />
+                  <lineSegments position={[0, 2, 0]}>
+                      <edgesGeometry args={[new THREE.BoxGeometry(6.4, 4, 1)]} />
                       <lineBasicMaterial color="white" linewidth={2} />
                   </lineSegments>
-                  <Text position={[0, 3, 0]} fontSize={3} color="white" anchorX="center" anchorY="middle" outlineWidth={0.1} outlineColor="black">
+                  <SafeText position={[0, 4.5, 0]} fontSize={3} color="white" anchorX="center" anchorY="middle" outlineWidth={0.1} outlineColor="black">
                     {item.text}
-                  </Text>
+                  </SafeText>
               </group>
           )
       ))}
 
-      {/* Render Obstacles */}
       {data.obstacles.map((obs) => {
           if (obs.type === ObstacleType.COIN && !obs.isCollected) {
               return <Coin key={obs.id} position={obs.position} />;
-          }
-          if (obs.type === ObstacleType.CRATE) {
-              return <Crate key={obs.id} position={obs.position} rotation={obs.rotation} />;
           }
           if (obs.type === ObstacleType.RAMP) {
               return <Ramp key={obs.id} position={obs.position} rotation={obs.rotation} />;
@@ -284,10 +301,6 @@ export const Track: React.FC = () => {
       {visibleChunks.map(chunk => (
         <TrackChunk key={chunk.id} data={chunk} />
       ))}
-      <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[3, TRACK_WIDTH]} />
-        <meshStandardMaterial color="white" />
-      </mesh>
     </group>
   );
 };

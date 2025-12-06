@@ -20,55 +20,183 @@ import {
   JUMP_FORCE
 } from '../types';
 import { useGameStore } from '../store';
+import { soundManager } from '../audio';
 
 const CarModel = () => {
+  const primaryColor = "#0055ff"; // Racing Blue
+  const secondaryColor = "#ffffff"; // White stripes
+  const tireColor = "#1a1a1a";
+  const rimColor = "#333333";
+
   return (
-    <group>
-      {/* Chassis */}
-      <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1, 0.5, 2]} />
-        <meshStandardMaterial color="#0066cc" metalness={0.6} roughness={0.2} />
+    <group position={[0, -0.2, 0]}> 
+      {/* --- Main Body Chassis --- */}
+      {/* Central Body */}
+      <mesh position={[0, 0.6, 0]} castShadow receiveShadow>
+        <boxGeometry args={[0.6, 0.4, 2.2]} />
+        <meshStandardMaterial color={primaryColor} roughness={0.3} metalness={0.7} />
       </mesh>
       
-      {/* Spoiler */}
-      <mesh position={[0, 0.9, -0.8]} castShadow>
-        <boxGeometry args={[1.2, 0.1, 0.4]} />
-        <meshStandardMaterial color="#004499" />
+      {/* Front Nose Cone (Tapered look using scale or just a smaller box) */}
+      <mesh position={[0, 0.45, 1.4]} castShadow>
+        <boxGeometry args={[0.4, 0.2, 0.8]} />
+        <meshStandardMaterial color={primaryColor} />
       </mesh>
 
-      {/* Cockpit */}
-      <mesh position={[0, 0.7, 0.2]}>
-        <boxGeometry args={[0.7, 0.4, 0.8]} />
-        <meshStandardMaterial color="#111" />
+      {/* Front Wing */}
+      <mesh position={[0, 0.25, 1.7]} castShadow>
+        <boxGeometry args={[1.6, 0.1, 0.4]} />
+        <meshStandardMaterial color={secondaryColor} />
+      </mesh>
+      {/* Front Wing Flaps */}
+      <mesh position={[0.7, 0.35, 1.65]} rotation={[0.2, 0, 0]}>
+         <boxGeometry args={[0.2, 0.2, 0.3]} />
+         <meshStandardMaterial color={primaryColor} />
+      </mesh>
+      <mesh position={[-0.7, 0.35, 1.65]} rotation={[0.2, 0, 0]}>
+         <boxGeometry args={[0.2, 0.2, 0.3]} />
+         <meshStandardMaterial color={primaryColor} />
       </mesh>
 
-      {/* Wheels */}
-      <mesh position={[0.6, 0.3, 0.8]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.3, 0.3, 0.2, 16]} />
-        <meshStandardMaterial color="#222" />
+      {/* --- Side Pods (Air Intakes) --- */}
+      <group position={[0, 0, 0.2]}>
+        {/* Left Pod */}
+        <mesh position={[0.55, 0.5, 0]} castShadow>
+             <boxGeometry args={[0.5, 0.35, 1.2]} />
+             <meshStandardMaterial color={primaryColor} />
+        </mesh>
+        <mesh position={[0.55, 0.5, 0.61]} rotation={[Math.PI/2, 0, 0]}>
+             <planeGeometry args={[0.4, 0.3]} />
+             <meshStandardMaterial color="#111" /> {/* Intake hole */}
+        </mesh>
+        
+        {/* Right Pod */}
+        <mesh position={[-0.55, 0.5, 0]} castShadow>
+             <boxGeometry args={[0.5, 0.35, 1.2]} />
+             <meshStandardMaterial color={primaryColor} />
+        </mesh>
+        <mesh position={[-0.55, 0.5, 0.61]} rotation={[Math.PI/2, 0, 0]}>
+             <planeGeometry args={[0.4, 0.3]} />
+             <meshStandardMaterial color="#111" />
+        </mesh>
+      </group>
+
+      {/* --- Rear Wing / Spoiler --- */}
+      <group position={[0, 0.9, -1.0]}>
+        {/* Side Plates */}
+        <mesh position={[0.7, 0, 0]}>
+             <boxGeometry args={[0.05, 0.6, 0.6]} />
+             <meshStandardMaterial color={primaryColor} />
+        </mesh>
+        <mesh position={[-0.7, 0, 0]}>
+             <boxGeometry args={[0.05, 0.6, 0.6]} />
+             <meshStandardMaterial color={primaryColor} />
+        </mesh>
+        {/* Main Wing Blades */}
+        <mesh position={[0, 0.2, 0.1]} rotation={[-0.1, 0, 0]}>
+             <boxGeometry args={[1.4, 0.05, 0.3]} />
+             <meshStandardMaterial color={secondaryColor} />
+        </mesh>
+        <mesh position={[0, -0.1, 0]} rotation={[-0.1, 0, 0]}>
+             <boxGeometry args={[1.4, 0.05, 0.3]} />
+             <meshStandardMaterial color="#111" />
+        </mesh>
+      </group>
+
+      {/* --- Engine Area --- */}
+      <mesh position={[0, 0.6, -0.8]} castShadow>
+          <boxGeometry args={[0.55, 0.45, 0.6]} />
+          <meshStandardMaterial color="#222" />
       </mesh>
-      <mesh position={[-0.6, 0.3, 0.8]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.3, 0.3, 0.2, 16]} />
-        <meshStandardMaterial color="#222" />
+      {/* Exhaust Pipes */}
+      <mesh position={[0.15, 0.5, -1.15]} rotation={[Math.PI/2, 0, 0]}>
+          <cylinderGeometry args={[0.08, 0.08, 0.2]} />
+          <meshStandardMaterial color="#555" />
       </mesh>
-      <mesh position={[0.6, 0.3, -0.8]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.35, 0.35, 0.2, 16]} />
-        <meshStandardMaterial color="#222" />
+      <mesh position={[-0.15, 0.5, -1.15]} rotation={[Math.PI/2, 0, 0]}>
+          <cylinderGeometry args={[0.08, 0.08, 0.2]} />
+          <meshStandardMaterial color="#555" />
       </mesh>
-      <mesh position={[-0.6, 0.3, -0.8]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.35, 0.35, 0.2, 16]} />
-        <meshStandardMaterial color="#222" />
+
+      {/* --- Cockpit & Driver --- */}
+      <mesh position={[0, 0.75, -0.1]}>
+         <boxGeometry args={[0.5, 0.3, 0.8]} />
+         <meshStandardMaterial color="#111" />
+      </mesh>
+      {/* Steering Wheel */}
+      <mesh position={[0, 0.9, 0.1]} rotation={[0.5, 0, 0]}>
+         <boxGeometry args={[0.3, 0.2, 0.05]} />
+         <meshStandardMaterial color="#333" />
+      </mesh>
+      {/* Driver Helmet */}
+      <group position={[0, 1.0, -0.2]}>
+          <mesh>
+             <sphereGeometry args={[0.22, 16, 16]} />
+             <meshStandardMaterial color="white" roughness={0.2} />
+          </mesh>
+          {/* Visor */}
+          <mesh position={[0, 0.02, 0.18]}>
+             <sphereGeometry args={[0.12, 16, 16]} />
+             <meshStandardMaterial color="black" roughness={0} />
+          </mesh>
+      </group>
+
+      {/* --- Wheels --- */}
+      {/* Front Wheels (Thinner) */}
+      <mesh position={[0.7, 0.35, 1.1]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.35, 0.35, 0.35, 24]} />
+        <meshStandardMaterial color={tireColor} roughness={0.9} />
+      </mesh>
+      <mesh position={[0.7, 0.35, 1.1]} rotation={[0, 0, Math.PI / 2]}> {/* Rim */}
+        <cylinderGeometry args={[0.2, 0.2, 0.36, 12]} />
+        <meshStandardMaterial color={rimColor} />
+      </mesh>
+
+      <mesh position={[-0.7, 0.35, 1.1]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.35, 0.35, 0.35, 24]} />
+        <meshStandardMaterial color={tireColor} roughness={0.9} />
+      </mesh>
+      <mesh position={[-0.7, 0.35, 1.1]} rotation={[0, 0, Math.PI / 2]}> {/* Rim */}
+        <cylinderGeometry args={[0.2, 0.2, 0.36, 12]} />
+        <meshStandardMaterial color={rimColor} />
+      </mesh>
+
+      {/* Rear Wheels (Fat & Bigger) */}
+      <mesh position={[0.75, 0.4, -0.8]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.4, 0.4, 0.5, 24]} />
+        <meshStandardMaterial color={tireColor} roughness={0.9} />
+      </mesh>
+      <mesh position={[0.75, 0.4, -0.8]} rotation={[0, 0, Math.PI / 2]}> {/* Rim */}
+        <cylinderGeometry args={[0.25, 0.25, 0.51, 12]} />
+        <meshStandardMaterial color={rimColor} />
+      </mesh>
+
+      <mesh position={[-0.75, 0.4, -0.8]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.4, 0.4, 0.5, 24]} />
+        <meshStandardMaterial color={tireColor} roughness={0.9} />
+      </mesh>
+      <mesh position={[-0.75, 0.4, -0.8]} rotation={[0, 0, Math.PI / 2]}> {/* Rim */}
+        <cylinderGeometry args={[0.25, 0.25, 0.51, 12]} />
+        <meshStandardMaterial color={rimColor} />
+      </mesh>
+
+      {/* --- Lights --- */}
+      {/* Front Headlights */}
+      <mesh position={[0.2, 0.45, 1.8]} rotation={[Math.PI/2, 0, 0]}>
+        <circleGeometry args={[0.08]} />
+        <meshStandardMaterial color="#fff" emissive="#fff" emissiveIntensity={5} />
+      </mesh>
+      <mesh position={[-0.2, 0.45, 1.8]} rotation={[Math.PI/2, 0, 0]}>
+        <circleGeometry args={[0.08]} />
+        <meshStandardMaterial color="#fff" emissive="#fff" emissiveIntensity={5} />
       </mesh>
       
-      {/* Headlights */}
-      <mesh position={[0.3, 0.5, 1]} rotation={[Math.PI/2, 0, 0]}>
-        <circleGeometry args={[0.15]} />
-        <meshStandardMaterial color="#fff" emissive="#fff" emissiveIntensity={2} />
+      {/* Rear Brake Light (Center) */}
+      <mesh position={[0, 0.4, -1.2]}>
+          <boxGeometry args={[0.2, 0.1, 0.05]} />
+          <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={2} />
       </mesh>
-      <mesh position={[-0.3, 0.5, 1]} rotation={[Math.PI/2, 0, 0]}>
-        <circleGeometry args={[0.15]} />
-        <meshStandardMaterial color="#fff" emissive="#fff" emissiveIntensity={2} />
-      </mesh>
+
     </group>
   );
 };
@@ -76,7 +204,7 @@ const CarModel = () => {
 export const Car: React.FC = () => {
   const group = useRef<THREE.Group>(null);
   const controls = useControls();
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   
   const gameStatus = useGameStore((state) => state.status);
   const setGameSpeed = useGameStore((state) => state.setSpeed);
@@ -91,6 +219,13 @@ export const Car: React.FC = () => {
   const collectItem = useGameStore((state) => state.collectItem);
   const collectCoin = useGameStore((state) => state.collectCoin);
   const answerQuestion = useGameStore((state) => state.answerQuestion);
+  const destroyObstacle = useGameStore((state) => state.destroyObstacle);
+  
+  const competitors = useGameStore((state) => state.competitors);
+
+  const lastScrapeTime = useRef(0);
+  const lastDriftTime = useRef(0);
+  const lastCompHitTime = useRef(0);
 
   // Initialize track
   useEffect(() => {
@@ -99,11 +234,25 @@ export const Car: React.FC = () => {
 
   // Physics state
   const speed = useRef(0);
-  const rotation = useRef(0);
+  const rotation = useRef(0); // Facing direction (Model)
+  const courseRotation = useRef(0); // Movement direction (Inertia/Velocity)
   const velocityY = useRef(0); // Vertical speed
   const position = useRef(new THREE.Vector3(0, 0, 0));
   
-  const lookAtOffset = new THREE.Vector3(0, 1, 5);
+  // Drift State
+  const driftDuration = useRef(0); // How long shift is held
+
+  // Progressive Steering State
+  const steerDuration = useRef(0);
+  const lastSteerDir = useRef(0); // -1: Right, 1: Left
+
+  // Responsive Camera settings
+  const isMobile = size.width < 768;
+  const baseLookAhead = isMobile ? 10 : 5;
+  const baseCamDist = isMobile ? -11 : -8;
+  const baseCamHeight = isMobile ? 6 : 4;
+  
+  const lookAtOffset = new THREE.Vector3(0, 1, baseLookAhead);
 
   useFrame((state, delta) => {
     if (!group.current) return;
@@ -113,6 +262,13 @@ export const Car: React.FC = () => {
     let currentMaxSpeed = MAX_SPEED;
     if (boostTimer > 0) currentMaxSpeed *= BOOST_MULTIPLIER;
     if (penaltyTimer > 0) currentMaxSpeed *= PENALTY_MULTIPLIER;
+
+    // Update Engine Sound Pitch
+    if (gameStatus === GameStatus.RACING) {
+        soundManager.updateEnginePitch(speed.current / MAX_SPEED);
+    } else {
+        soundManager.updateEnginePitch(0);
+    }
 
     // 1. Controls & Horizontal Physics
     if (gameStatus === GameStatus.RACING) {
@@ -129,26 +285,84 @@ export const Car: React.FC = () => {
             speed.current = Math.max(currentMaxSpeed, speed.current - FRICTION * 2);
         }
 
-        // Only turn if car is moving and on ground (mostly)
+        // Turning Physics (Rotation of the Car Model)
         if (Math.abs(speed.current) > 0.01 && position.current.y < 2) {
             const dir = speed.current > 0 ? 1 : -1;
             
-            // Drift Logic: Sharper turn when drifting
-            const driftMultiplier = controls.drift ? 2.5 : 1.0;
-            const currentTurnSpeed = TURN_SPEED * driftMultiplier;
+            const isDrifting = controls.drift && Math.abs(speed.current) > 0.15;
+            
+            // Progressive Drift Logic
+            const MAX_DRIFT_TIME = 1.2; 
+            if (isDrifting) {
+                driftDuration.current = Math.min(driftDuration.current + delta, MAX_DRIFT_TIME);
+            } else {
+                driftDuration.current = 0;
+            }
+
+            // Drift Multiplier: 1.1x -> 4.0x
+            const driftProgress = driftDuration.current / MAX_DRIFT_TIME;
+            const driftBonus = driftProgress * 2.9; 
+            const driftMultiplier = isDrifting ? (1.1 + driftBonus) : 1.0;
+
+            // Progressive Steering Logic (Simulate Steering Wheel)
+            const turnInput = controls.left ? 1 : (controls.right ? -1 : 0);
+            if (turnInput !== 0) {
+                if (turnInput !== lastSteerDir.current) {
+                    steerDuration.current = 0; // Reset if direction changed
+                    lastSteerDir.current = turnInput;
+                }
+                // Ramp up over 0.6 seconds
+                steerDuration.current = Math.min(steerDuration.current + delta, 0.6);
+            } else {
+                // Return to center quickly
+                steerDuration.current = Math.max(steerDuration.current - delta * 5, 0);
+                if (steerDuration.current === 0) lastSteerDir.current = 0;
+            }
+
+            // Steer Multiplier: 0.6x (Tap/Fine Control) -> 1.5x (Full Lock)
+            const steerProgress = steerDuration.current / 0.6;
+            const steerMultiplier = 0.6 + (steerProgress * 0.9);
+
+            const currentTurnSpeed = TURN_SPEED * steerMultiplier * driftMultiplier;
 
             if (controls.left) rotation.current += currentTurnSpeed * dir;
             if (controls.right) rotation.current -= currentTurnSpeed * dir;
+
+            // Course Correction (Inertia/Grip Logic)
+            const grip = isDrifting ? 0.06 + (driftDuration.current * 0.02) : 0.15;
+            
+            // Lerp courseRotation towards rotation
+            const angleDiff = rotation.current - courseRotation.current;
+            courseRotation.current += angleDiff * grip;
+
+            // Drift Sound (Throttled)
+            if (isDrifting) {
+                 const now = state.clock.elapsedTime;
+                 if (now - lastDriftTime.current > 0.2) {
+                     soundManager.playSfx('drift');
+                     lastDriftTime.current = now;
+                 }
+            }
+        } else {
+            // Not moving much, course aligns with rotation
+            courseRotation.current = rotation.current;
+            driftDuration.current = 0;
+            steerDuration.current = 0;
         }
     } else {
         if (gameStatus === GameStatus.FINISHED) {
              speed.current = Math.max(0, speed.current - FRICTION * 2);
+             courseRotation.current = rotation.current; // No drift when finished
+             driftDuration.current = 0;
         } else if (gameStatus === GameStatus.IDLE) {
             if (position.current.x !== 0 || position.current.z !== 0) {
                 position.current.set(0,0,0);
                 rotation.current = 0;
+                courseRotation.current = 0;
                 speed.current = 0;
                 velocityY.current = 0;
+                driftDuration.current = 0;
+                steerDuration.current = 0;
             }
         }
     }
@@ -177,13 +391,22 @@ export const Car: React.FC = () => {
     let progressInChunk = 0; 
 
     for (const chunk of relevantChunks) {
-        // Road Logic
-        const curve = new THREE.CatmullRomCurve3(chunk.controlPoints, false);
+        // Road Logic with Ghosts support
+        const useGhost = chunk.renderPoints && chunk.renderPoints.length > 0;
+        const points = useGhost ? chunk.renderPoints! : chunk.controlPoints;
+        const curve = new THREE.CatmullRomCurve3(points, false);
+        
         const divisions = 20;
+        const len = points.length;
+        // Map division loop to valid segment t range
+        const tStart = useGhost ? 1 / (len - 1) : 0;
+        const tEnd = useGhost ? (len - 2) / (len - 1) : 1;
+
         for (let i = 0; i <= divisions; i++) {
-            const t = i / divisions;
+            const linearT = i / divisions;
+            const t = tStart + linearT * (tEnd - tStart);
+
             const p = curve.getPointAt(t);
-            // We ignore Y for track center distance in this simple model
             const flatP = new THREE.Vector3(p.x, 0, p.z);
             const flatCar = new THREE.Vector3(currentPos.x, 0, currentPos.z);
             const d = flatP.distanceTo(flatCar);
@@ -193,7 +416,7 @@ export const Car: React.FC = () => {
                 closestPoint = flatP;
                 if (d < TRACK_WIDTH / 2 + 10) { // Broad phase
                     activeChunkId = chunk.id;
-                    progressInChunk = t;
+                    progressInChunk = linearT; // Use linear progress for gameplay logic
                 }
             }
         }
@@ -202,42 +425,29 @@ export const Car: React.FC = () => {
         chunk.items.forEach(item => {
             if (!item.isCollected) {
                 const dist = currentPos.distanceTo(item.position);
-                if (dist < 2.5) { 
+                if (dist < 3.5) { 
                     collectItem(chunk.id, item.id);
                     answerQuestion(item.isCorrect);
                 }
             }
         });
 
-        // Obstacles (Coins, Crates, Ramps)
+        // Obstacles (Coins, Ramps)
         chunk.obstacles.forEach(obs => {
+            if (obs.isCollected) return;
+
             const dist = currentPos.distanceTo(obs.position);
             
-            if (obs.type === ObstacleType.COIN && !obs.isCollected) {
+            if (obs.type === ObstacleType.COIN) {
                 if (dist < 2.0) {
                     collectCoin(chunk.id, obs.id);
                 }
             }
-            
-            else if (obs.type === ObstacleType.CRATE) {
-                // Hard collision box for crate
-                // Reduced collision distance to 1.2 for smaller crates (was 2.5)
-                if (dist < 1.2) {
-                    // Simple impulse bounce
-                    speed.current = -speed.current * 0.5;
-                    // Move car back slightly to prevent sticking
-                    const bounceDir = currentPos.clone().sub(obs.position).normalize();
-                    position.current.add(bounceDir.multiplyScalar(0.5));
-                }
-            }
-            
             else if (obs.type === ObstacleType.RAMP) {
-                // Trigger Jump if entering from roughly the front
                 if (dist < 3.0 && position.current.y < 1.0) {
-                    // Only jump if moving fast enough
                     if (Math.abs(speed.current) > 0.1) {
                          velocityY.current = JUMP_FORCE;
-                         // Slight forward boost on jump
+                         soundManager.playSfx('jump');
                          speed.current = Math.min(speed.current * 1.2, currentMaxSpeed * 1.5);
                     }
                 }
@@ -245,29 +455,74 @@ export const Car: React.FC = () => {
         });
     }
 
-    // 4. Wall Collision (Bounds check)
-    // Track Width is total width. Half width is center to wall.
-    // Car width is approx 1. So allowed distance is HalfWidth - 1.
+    // --- Competitor Collision ---
+    // Iterate through nearby competitors to check for collisions
+    competitors.forEach(comp => {
+        // Broad phase: only check bots in current or nearby chunks
+        if (Math.abs(comp.chunkId - playerChunkIndex) <= 1) {
+            // Calculate bot position (Expensive, but necessary for physics)
+            const chunk = chunks.find(c => c.id === comp.chunkId);
+            if (chunk) {
+                const points = chunk.renderPoints || chunk.controlPoints;
+                const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
+                
+                const useGhost = !!chunk.renderPoints;
+                const len = points.length;
+                const tStart = useGhost ? 1 / (len - 1) : 0;
+                const tEnd = useGhost ? (len - 2) / (len - 1) : 1;
+                
+                const realT = tStart + comp.progress * (tEnd - tStart);
+                const p = curve.getPointAt(realT);
+                const tan = curve.getTangentAt(realT).normalize();
+                const up = new THREE.Vector3(0, 1, 0);
+                const side = new THREE.Vector3().crossVectors(up, tan).normalize();
+                
+                // Bot World Position
+                const botPos = p.add(side.multiplyScalar(comp.laneOffset));
+                
+                // Check distance
+                const dist = currentPos.distanceTo(botPos);
+                if (dist < 1.8) { // Collision Radius
+                    // Repulsion vector
+                    const pushDir = currentPos.clone().sub(botPos).normalize();
+                    position.current.add(pushDir.multiplyScalar(0.2)); // Push player away
+                    
+                    // Slow down slightly
+                    speed.current *= 0.9;
+                    
+                    const now = state.clock.elapsedTime;
+                    if (now - lastCompHitTime.current > 0.5) {
+                        soundManager.playSfx('crash');
+                        lastCompHitTime.current = now;
+                    }
+                }
+            }
+        }
+    });
+    
+    // 4. Wall Collision
     const allowedDist = (TRACK_WIDTH / 2) - 1.0; 
     
     if (minDistance > allowedDist && position.current.y < 2) {
-        // We hit the wall
-        
-        // 1. Calculate direction from closest track point to car
         const pushDir = currentPos.clone().sub(closestPoint).normalize();
-        
-        // 2. Clamp position to edge
         const clampedPos = closestPoint.clone().add(pushDir.multiplyScalar(allowedDist));
         position.current.x = clampedPos.x;
         position.current.z = clampedPos.z;
 
-        // 3. Friction penalty for scraping wall
         speed.current *= 0.95; 
+        
+        if (Math.abs(speed.current) > 0.1) {
+            const now = state.clock.elapsedTime;
+            if (now - lastScrapeTime.current > 0.4) {
+                 soundManager.playSfx('scrape');
+                 lastScrapeTime.current = now;
+            }
+        }
     }
 
     // 5. Move Car
     const velocity = new THREE.Vector3(0, 0, 1)
-      .applyAxisAngle(new THREE.Vector3(0, 1, 0), rotation.current)
+      .applyAxisAngle(new THREE.Vector3(0, 1, 0), courseRotation.current)
       .multiplyScalar(speed.current);
     
     position.current.x += velocity.x;
@@ -276,31 +531,28 @@ export const Car: React.FC = () => {
     setGameSpeed(speed.current);
     setCarPosition(position.current.x, position.current.z, activeChunkId, progressInChunk);
 
-    // 6. Update Ref
+    // 6. Update Visuals
     group.current.position.copy(position.current);
     group.current.rotation.y = rotation.current;
     
-    // Pitch up when jumping
     const pitch = velocityY.current * 0.5; 
     group.current.rotation.x = pitch;
 
-    // Enhanced lean on drift
-    const driftLean = controls.drift ? 1.5 : 0.8;
-    const leanAngle = (controls.left ? 1 : controls.right ? -1 : 0) * (speed.current * driftLean); 
+    const isDrifting = controls.drift && Math.abs(speed.current) > 0.15;
+    const leanAngle = (controls.left ? 1 : controls.right ? -1 : 0) * (speed.current * 0.5 + (isDrifting ? 0.3 : 0)); 
     group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, -leanAngle, 0.1);
 
     // 7. Camera
     const isBoosting = boostTimer > 0;
-    const boostCamDist = isBoosting ? -12 : -8;
+    const boostOffset = isBoosting ? -4 : 0; 
     
-    const carRotation = new THREE.Euler(0, rotation.current, 0);
-    // Camera follows Y movement but dampened
-    const camY = Math.max(4, 4 + position.current.y * 0.8); 
+    const camRotation = new THREE.Euler(0, courseRotation.current, 0); 
+    const camY = Math.max(baseCamHeight, baseCamHeight + position.current.y * 0.8); 
     
-    const offset = new THREE.Vector3(0, camY, boostCamDist);
-    const idealCamPos = position.current.clone().add(offset.clone().applyEuler(carRotation));
-    const idealLookAt = position.current.clone().add(lookAtOffset.clone().applyEuler(carRotation));
-    // Look at slightly higher point when jumping
+    const offset = new THREE.Vector3(0, camY, baseCamDist + boostOffset);
+    const idealCamPos = position.current.clone().add(offset.clone().applyEuler(camRotation));
+    
+    const idealLookAt = position.current.clone().add(lookAtOffset.clone().applyEuler(camRotation));
     idealLookAt.y += position.current.y * 0.5;
 
     camera.position.lerp(idealCamPos, 0.1);
@@ -310,16 +562,31 @@ export const Car: React.FC = () => {
   return (
     <group ref={group}>
         <CarModel />
-        {/* Visual drift smoke or spark could go here, for now simple indicators */}
-        {boostTimer > 0 && (
-             <group position={[0, 0.5, -2]}>
+        {(boostTimer > 0 || (controls.drift && Math.abs(speed.current) > 0.15)) && (
+             <group position={[0, 0.2, -1.8]}>
                  <mesh position={[0.4, 0, 0]}>
-                    <coneGeometry args={[0.2, 1, 8]} />
-                    <meshBasicMaterial color="orange" transparent opacity={0.8} />
+                    <sphereGeometry args={[0.2, 8, 8]} />
+                    <meshBasicMaterial 
+                        color={
+                            boostTimer > 0 ? "orange" : 
+                            driftDuration.current > 0.8 ? "#00ffff" : 
+                            driftDuration.current > 0.4 ? "#ffaa00" : 
+                            "white"
+                        } 
+                        transparent opacity={0.6} 
+                    />
                  </mesh>
                  <mesh position={[-0.4, 0, 0]}>
-                    <coneGeometry args={[0.2, 1, 8]} />
-                    <meshBasicMaterial color="orange" transparent opacity={0.8} />
+                    <sphereGeometry args={[0.2, 8, 8]} />
+                    <meshBasicMaterial 
+                         color={
+                            boostTimer > 0 ? "orange" : 
+                            driftDuration.current > 0.8 ? "#00ffff" : 
+                            driftDuration.current > 0.4 ? "#ffaa00" : 
+                            "white"
+                        } 
+                        transparent opacity={0.6} 
+                    />
                  </mesh>
              </group>
         )}
