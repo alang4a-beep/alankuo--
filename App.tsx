@@ -50,7 +50,7 @@ const TouchControls = () => {
     );
 
     return (
-        <div className="absolute inset-0 pointer-events-none z-50 flex flex-col justify-end pb-6 px-6">
+        <div className="absolute inset-0 pointer-events-none z-50 flex flex-col justify-end pb-6 px-6 landscape:pb-2 landscape:px-12">
             <div className="flex justify-between items-end w-full pointer-events-auto">
                 {/* Left Controls: Steering */}
                 <div className="flex gap-4">
@@ -61,8 +61,8 @@ const TouchControls = () => {
                 {/* Right Controls: Gas, Brake, Drift */}
                 <div className="flex gap-4 items-end">
                     <Btn k="Shift" label="DRIFT" className="w-16 h-16 text-xs bg-yellow-500/30 border-yellow-400/50 text-yellow-100" />
-                    <div className="flex flex-col gap-4 items-center">
-                        <Btn k="ArrowUp" label="GAS" className="w-20 h-24 text-xl bg-green-500/30 border-green-400/50" />
+                    <div className="flex flex-col gap-4 items-center landscape:gap-2">
+                        <Btn k="ArrowUp" label="GAS" className="w-20 h-24 text-xl bg-green-500/30 border-green-400/50 landscape:h-20" />
                         <Btn k="ArrowDown" label="BRAKE" className="w-16 h-12 text-xs bg-red-500/30 border-red-400/50" />
                     </div>
                 </div>
@@ -165,15 +165,15 @@ function HUD() {
 
       {/* Top Center: Quiz Question Box */}
       {status === GameStatus.RACING && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 flex justify-center z-20 w-full px-4">
-          <div className="bg-black/80 border-2 border-yellow-400 rounded-xl p-3 md:p-4 w-full max-w-[400px] text-center backdrop-blur-md shadow-2xl">
-              <div className="text-gray-400 text-[10px] md:text-xs uppercase tracking-widest mb-1">Current Challenge</div>
-              <div className="text-2xl md:text-3xl font-bold text-white">
+        <div className="absolute top-4 landscape:top-2 left-1/2 -translate-x-1/2 flex justify-center z-20 w-full px-4 pointer-events-none">
+          <div className="bg-black/80 border-2 border-yellow-400 rounded-xl p-3 md:p-4 w-full max-w-[400px] text-center backdrop-blur-md shadow-2xl pointer-events-auto landscape:w-auto landscape:max-w-none landscape:flex landscape:items-center landscape:gap-4 landscape:p-2 landscape:bg-black/60 landscape:rounded-full landscape:border-white/30">
+              <div className="text-gray-400 text-[10px] md:text-xs uppercase tracking-widest mb-1 landscape:hidden">Current Challenge</div>
+              <div className="text-2xl md:text-3xl font-bold text-white landscape:text-xl landscape:mb-0 whitespace-nowrap">
                   {currentQuestion.question}
               </div>
-              <div className="flex justify-center gap-2 md:gap-4 mt-2 text-xs md:text-sm text-yellow-200">
+              <div className="flex justify-center gap-2 md:gap-4 mt-2 landscape:mt-0 text-xs md:text-sm text-yellow-200">
                   {currentQuestion.options.map((opt, i) => (
-                      <span key={i} className="bg-white/10 px-2 py-1 rounded border border-white/10">{opt}</span>
+                      <span key={i} className="bg-white/10 px-2 py-1 landscape:py-0.5 rounded border border-white/10 whitespace-nowrap">{opt}</span>
                   ))}
               </div>
           </div>
@@ -227,7 +227,7 @@ function HUD() {
       <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-30">
         {feedbackMessage && status === GameStatus.RACING && (
             <div className={`
-                fixed top-32 animate-pulse text-lg md:text-2xl font-black py-2 px-8 rounded-full border-2 shadow-2xl z-40
+                fixed top-32 landscape:top-16 animate-pulse text-lg md:text-2xl font-black py-2 px-8 rounded-full border-2 shadow-2xl z-40
                 ${feedbackMessage.includes('CORRECT') ? 'bg-green-600/90 text-white border-green-300' : 'bg-red-600/90 text-white border-red-300'}
             `}>
                 {feedbackMessage}
