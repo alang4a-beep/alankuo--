@@ -248,10 +248,10 @@ export const Car: React.FC = () => {
 
   // Responsive Camera settings
   const isMobile = size.width < 768;
-  const baseLookAhead = isMobile ? 10 : 5;
-  const baseCamDist = isMobile ? -11 : -8;
-  const baseCamHeight = isMobile ? 5.5 : 4; // Lower camera on mobile for better speed feel
-  const baseFov = isMobile ? 60 : 50; // Wider FOV on mobile
+  const baseLookAhead = isMobile ? 8 : 5;
+  const baseCamDist = isMobile ? -6.5 : -8; // Closer on mobile (was -11)
+  const baseCamHeight = isMobile ? 3.2 : 4; // Lower on mobile (was 5.5)
+  const baseFov = isMobile ? 55 : 50; // Standard FOV on mobile (was 60)
   
   const lookAtOffset = new THREE.Vector3(0, 1, baseLookAhead);
 
@@ -542,7 +542,10 @@ export const Car: React.FC = () => {
     
     // Dynamic FOV based on speed ratio
     const speedRatio = Math.abs(speed.current) / MAX_SPEED;
-    const targetFov = baseFov + (speedRatio * 20); // Scale FOV from base up to +20 degrees
+    // Scale FOV less aggressively on mobile to prevent "tiny car" effect
+    const maxFovBoost = isMobile ? 15 : 20;
+    const targetFov = baseFov + (speedRatio * maxFovBoost); 
+    
     camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.1);
     camera.updateProjectionMatrix();
 
