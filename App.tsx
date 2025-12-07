@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, Suspense } from 'react';
+import React, { useEffect, useState, useMemo, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Track } from './components/Track';
 import { Car } from './components/Car';
@@ -17,13 +17,13 @@ const TouchControls = () => {
         window.dispatchEvent(event);
     };
 
-    const handlePointerDown = (key: string) => (e: React.PointerEvent) => {
+    const handleBtnDown = (key: string) => (e: React.PointerEvent) => {
         e.preventDefault();
         e.stopPropagation();
         triggerKey(key, 'keydown');
     };
 
-    const handlePointerUp = (key: string) => (e: React.PointerEvent) => {
+    const handleBtnUp = (key: string) => (e: React.PointerEvent) => {
         e.preventDefault();
         e.stopPropagation();
         triggerKey(key, 'keyup');
@@ -38,15 +38,69 @@ const TouchControls = () => {
                 userSelect: 'none',
                 WebkitTouchCallout: 'none' 
             }}
-            onPointerDown={handlePointerDown(k)}
-            onPointerUp={handlePointerUp(k)}
-            onPointerLeave={handlePointerUp(k)} // Release if sliding off
-            onPointerCancel={handlePointerUp(k)} // Release if interrupted
-            onContextMenu={(e) => e.preventDefault()} // Prevent context menu
+            onPointerDown={handleBtnDown(k)}
+            onPointerUp={handleBtnUp(k)}
+            onPointerLeave={handleBtnUp(k)} 
+            onPointerCancel={handleBtnUp(k)}
+            onContextMenu={(e) => e.preventDefault()}
         >
             {label}
         </button>
     );
+
+    // --- Joystick Logic ---
+    const [joystickVec, setJoystickVec] = useState({ x: 0, y: 0 });
+    const joystickActive = useRef(false);
+    const startPos = useRef({ x: 0, y: 0 });
+
+    const handleJoystickDown = (e: React.PointerEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        joystickActive.current = true;
+        startPos.current = { x: e.clientX, y: e.clientY };
+        (e.target as Element).setPointerCapture(e.pointerId);
+    };
+
+    const handleJoystickMove = (e: React.PointerEvent) => {
+        if (!joystickActive.current) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const maxDist = 40; // Max radius of joystick movement
+        const dx = e.clientX - startPos.current.x;
+        const dy = e.clientY - startPos.current.y;
+        
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const clampedDist = Math.min(dist, maxDist);
+        const angle = Math.atan2(dy, dx);
+        
+        const clampedX = Math.cos(angle) * clampedDist;
+        const clampedY = Math.sin(angle) * clampedDist;
+        
+        setJoystickVec({ x: clampedX, y: clampedY });
+
+        // Steering Logic based on X axis
+        const threshold = 10;
+        if (clampedX < -threshold) {
+            triggerKey('ArrowLeft', 'keydown');
+            triggerKey('ArrowRight', 'keyup');
+        } else if (clampedX > threshold) {
+            triggerKey('ArrowRight', 'keydown');
+            triggerKey('ArrowLeft', 'keyup');
+        } else {
+            triggerKey('ArrowLeft', 'keyup');
+            triggerKey('ArrowRight', 'keyup');
+        }
+    };
+
+    const handleJoystickEnd = (e: React.PointerEvent) => {
+        if (!joystickActive.current) return;
+        joystickActive.current = false;
+        setJoystickVec({ x: 0, y: 0 });
+        triggerKey('ArrowLeft', 'keyup');
+        triggerKey('ArrowRight', 'keyup');
+        (e.target as Element).releasePointerCapture(e.pointerId);
+    };
 
     return (
         <div 
@@ -54,10 +108,23 @@ const TouchControls = () => {
         >
             {/* Scale down controls on mobile (85% size) to leave more screen space */}
             <div className="flex justify-between items-end w-full pointer-events-auto scale-[0.85] origin-bottom md:scale-100">
-                {/* Left Controls: Steering */}
-                <div className="flex gap-4">
-                    <Btn k="ArrowLeft" label="←" className="w-20 h-20 text-3xl landscape:w-24 landscape:h-24" />
-                    <Btn k="ArrowRight" label="→" className="w-20 h-20 text-3xl landscape:w-24 landscape:h-24" />
+                {/* Left Controls: Virtual Joystick */}
+                <div 
+                    className="relative w-32 h-32 rounded-full bg-black/30 border-2 border-white/20 backdrop-blur-md flex items-center justify-center touch-none landscape:w-36 landscape:h-36"
+                    onPointerDown={handleJoystickDown}
+                    onPointerMove={handleJoystickMove}
+                    onPointerUp={handleJoystickEnd}
+                    onPointerCancel={handleJoystickEnd}
+                    style={{ touchAction: 'none' }}
+                >
+                    {/* Joystick Knob */}
+                    <div 
+                        className="absolute w-12 h-12 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.6)] border-2 border-white/60 pointer-events-none transition-transform duration-75 landscape:w-16 landscape:h-16"
+                        style={{ transform: `translate(${joystickVec.x}px, ${joystickVec.y}px)` }}
+                    />
+                    {/* Direction Indicators */}
+                    <div className="absolute left-2 text-white/30 text-xl font-bold">◀</div>
+                    <div className="absolute right-2 text-white/30 text-xl font-bold">▶</div>
                 </div>
 
                 {/* Right Controls: Gas, Brake, Drift */}
@@ -65,10 +132,7 @@ const TouchControls = () => {
                     {/* Drift Button */}
                     <Btn k="Shift" label="DRIFT" className="w-16 h-16 text-xs bg-yellow-500/30 border-yellow-400/50 text-yellow-100 landscape:w-20 landscape:h-20 landscape:mb-2" />
                     
-                    {/* Gas & Brake Group 
-                        Portrait: flex-col-reverse (Brake Bottom, Gas Top)
-                        Landscape: flex-row (Brake Left, Gas Right) 
-                    */}
+                    {/* Gas & Brake Group */}
                     <div className="flex flex-col-reverse gap-4 items-center landscape:flex-row landscape:items-end landscape:gap-6">
                         <Btn k="ArrowDown" label="BRAKE" className="w-16 h-12 text-xs bg-red-500/30 border-red-400/50 landscape:w-20 landscape:h-20 landscape:text-sm landscape:rounded-full" />
                         <Btn k="ArrowUp" label="GAS" className="w-20 h-24 text-xl bg-green-500/30 border-green-400/50 landscape:w-24 landscape:h-24 landscape:rounded-full" />

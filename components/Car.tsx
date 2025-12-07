@@ -249,11 +249,11 @@ export const Car: React.FC = () => {
   // Responsive Camera settings
   const isMobile = size.width < 768;
   const baseLookAhead = isMobile ? 8 : 5;
-  const baseCamDist = isMobile ? -6.5 : -8; // Closer on mobile (was -11)
-  const baseCamHeight = isMobile ? 3.2 : 4; // Lower on mobile (was 5.5)
-  const baseFov = isMobile ? 55 : 50; // Standard FOV on mobile (was 60)
+  const baseCamDist = isMobile ? -5.0 : -6.5; // Significantly closer on mobile for larger car presence
+  const baseCamHeight = isMobile ? 2.5 : 3.0; // Lower on mobile for speed sensation
+  const baseFov = isMobile ? 55 : 50; 
   
-  const lookAtOffset = new THREE.Vector3(0, 1, baseLookAhead);
+  const lookAtOffset = new THREE.Vector3(0, 0.8, baseLookAhead); // Look slightly lower
 
   useFrame((state, delta) => {
     if (!group.current) return;
