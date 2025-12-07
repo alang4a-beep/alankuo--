@@ -160,13 +160,6 @@ function HUD() {
   return (
     <div className="absolute inset-0 pointer-events-none p-6">
       
-      {/* Landscape Warning for Mobile */}
-      <div className="fixed inset-0 bg-black/90 z-[100] md:hidden flex flex-col items-center justify-center text-center p-8 pointer-events-auto landscape:hidden">
-          <div className="text-4xl mb-4">🔄</div>
-          <h2 className="text-xl font-bold text-white mb-2">Rotate Device</h2>
-          <p className="text-gray-400">Please play in landscape mode for the best experience.</p>
-      </div>
-
       {/* Top Left: Minimap */}
       <Minimap />
 
