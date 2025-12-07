@@ -235,16 +235,16 @@ function HUD() {
         )}
 
         {status === GameStatus.IDLE && (
-          <div className="bg-black/80 p-8 rounded-2xl text-center border-2 border-yellow-500 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-300 max-w-sm md:max-w-3xl w-full">
-            <h1 className="text-4xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-2 tracking-tighter italic">
+          <div className="bg-black/80 p-4 md:p-8 rounded-2xl text-center border-2 border-yellow-500 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-300 w-[95%] max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <h1 className="text-3xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-2 tracking-tighter italic">
               POLY KART QUIZ
             </h1>
-            <p className="text-gray-400 mb-8 font-mono text-sm tracking-widest">ARCADE RACING & LEARNING</p>
+            <p className="text-gray-400 mb-4 md:mb-8 font-mono text-sm tracking-widest">ARCADE RACING & LEARNING</p>
             
-            <div className="flex flex-col md:flex-row gap-6 mb-8 text-left">
-                <div className="flex-1 bg-white/5 rounded-xl p-5 border border-white/10">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-4 md:mb-8 text-left">
+                <div className="flex-1 bg-white/5 rounded-xl p-4 md:p-5 border border-white/10">
                     <h3 className="text-yellow-400 font-bold mb-3 text-sm uppercase tracking-wide border-b border-white/10 pb-2">1. Select Lessons</h3>
-                    <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="grid grid-cols-1 gap-2 max-h-32 md:max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {Object.values(LESSON_CATALOG).map(lesson => (
                             <button
                                 key={lesson.id}
@@ -264,7 +264,7 @@ function HUD() {
                 </div>
 
                 <div className="flex-1 flex flex-col gap-4">
-                    <div className="bg-white/5 rounded-xl p-5 border border-white/10 flex-1">
+                    <div className="bg-white/5 rounded-xl p-4 md:p-5 border border-white/10 flex-1">
                         <h3 className="text-yellow-400 font-bold mb-3 text-sm uppercase tracking-wide border-b border-white/10 pb-2">2. How to Play</h3>
                         <ul className="text-gray-300 text-sm space-y-2">
                             <li>🏁 <b>Race</b> through infinite tracks.</li>
@@ -281,7 +281,7 @@ function HUD() {
               onClick={startGame}
               disabled={selectedLessonIds.length === 0}
               className={`
-                w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black py-4 px-8 rounded-xl text-2xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-yellow-500/20
+                w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black py-3 md:py-4 px-8 rounded-xl text-xl md:text-2xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-yellow-500/20
                 ${selectedLessonIds.length === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}
               `}
             >
