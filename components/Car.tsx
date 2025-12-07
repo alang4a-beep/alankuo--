@@ -538,12 +538,12 @@ export const Car: React.FC = () => {
 
     // 7. Camera (Enhanced with Dynamic FOV and Shake)
     const isBoosting = boostTimer > 0;
-    const boostOffset = isBoosting ? -4 : 0; 
+    const boostOffset = isBoosting ? -1.5 : 0; 
     
     // Dynamic FOV based on speed ratio
     const speedRatio = Math.abs(speed.current) / MAX_SPEED;
     // Scale FOV less aggressively on mobile to prevent "tiny car" effect
-    const maxFovBoost = isMobile ? 15 : 20;
+    const maxFovBoost = isMobile ? 8 : 12;
     const targetFov = baseFov + (speedRatio * maxFovBoost); 
     
     camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.1);
