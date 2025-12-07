@@ -269,12 +269,13 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
                       <lineBasicMaterial color="white" linewidth={2} />
                   </lineSegments>
                   <SafeText 
-                    position={[0, 2, 0.6]} 
-                    fontSize={3} 
+                    position={[0, 2, 1.1]} 
+                    fontSize={4} 
                     color="black" 
                     anchorX="center" 
                     anchorY="middle" 
                     outlineWidth={0}
+                    renderOrder={1}
                   >
                     {item.text}
                   </SafeText>
