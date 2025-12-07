@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Track } from './components/Track';
@@ -51,7 +50,7 @@ const TouchControls = () => {
 
     return (
         <div 
-            className="absolute inset-x-0 bottom-0 pointer-events-none z-50 flex flex-col justify-end px-4 pb-12 landscape:pb-[max(1.5rem,env(safe-area-inset-bottom))] landscape:px-8"
+            className="absolute inset-x-0 bottom-0 pointer-events-none z-50 flex flex-col justify-end px-4 pb-20 landscape:pb-[max(1.5rem,env(safe-area-inset-bottom))] landscape:px-8"
         >
             {/* Scale down controls on mobile (85% size) to leave more screen space */}
             <div className="flex justify-between items-end w-full pointer-events-auto scale-[0.85] origin-bottom md:scale-100">

@@ -2,12 +2,12 @@
 import { Vector3 } from 'three';
 
 export const TRACK_WIDTH = 20; // Widened from 12 to 20
-export const MAX_SPEED = 0.4; // Approx 80km/h
-export const ACCELERATION = 0.006;
+export const MAX_SPEED = 0.5; // Increased to approx 100km/h
+export const ACCELERATION = 0.008; // Snappier acceleration
 export const BRAKING = 0.02;
 export const FRICTION = 0.002;
 export const OFF_ROAD_FRICTION = 0.06;
-export const TURN_SPEED = 0.0125; // Reduced by 50% (was 0.025)
+export const TURN_SPEED = 0.0135; // Slightly increased for higher speeds
 
 // Jump & Gravity
 export const GRAVITY = 0.015;

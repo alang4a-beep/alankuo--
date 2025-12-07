@@ -250,7 +250,8 @@ export const Car: React.FC = () => {
   const isMobile = size.width < 768;
   const baseLookAhead = isMobile ? 10 : 5;
   const baseCamDist = isMobile ? -11 : -8;
-  const baseCamHeight = isMobile ? 6 : 4;
+  const baseCamHeight = isMobile ? 5.5 : 4; // Lower camera on mobile for better speed feel
+  const baseFov = isMobile ? 60 : 50; // Wider FOV on mobile
   
   const lookAtOffset = new THREE.Vector3(0, 1, baseLookAhead);
 
@@ -535,16 +536,30 @@ export const Car: React.FC = () => {
     const leanAngle = (controls.left ? 1 : controls.right ? -1 : 0) * (speed.current * 0.5 + (isDrifting ? 0.3 : 0)); 
     group.current.rotation.z = THREE.MathUtils.lerp(group.current.rotation.z, -leanAngle, 0.1);
 
-    // 7. Camera
+    // 7. Camera (Enhanced with Dynamic FOV and Shake)
     const isBoosting = boostTimer > 0;
     const boostOffset = isBoosting ? -4 : 0; 
     
+    // Dynamic FOV based on speed ratio
+    const speedRatio = Math.abs(speed.current) / MAX_SPEED;
+    const targetFov = baseFov + (speedRatio * 20); // Scale FOV from base up to +20 degrees
+    camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.1);
+    camera.updateProjectionMatrix();
+
     const camRotation = new THREE.Euler(0, courseRotation.current, 0); 
     const camY = Math.max(baseCamHeight, baseCamHeight + position.current.y * 0.8); 
     
     const offset = new THREE.Vector3(0, camY, baseCamDist + boostOffset);
     const idealCamPos = position.current.clone().add(offset.clone().applyEuler(camRotation));
     
+    // Camera Shake when speeding > 80%
+    if (speedRatio > 0.8) {
+        const shakeIntensity = (speedRatio - 0.8) * 0.2; // Max 0.04 magnitude
+        idealCamPos.x += (Math.random() - 0.5) * shakeIntensity;
+        idealCamPos.y += (Math.random() - 0.5) * shakeIntensity;
+        idealCamPos.z += (Math.random() - 0.5) * shakeIntensity;
+    }
+
     const idealLookAt = position.current.clone().add(lookAtOffset.clone().applyEuler(camRotation));
     idealLookAt.y += position.current.y * 0.5;
 

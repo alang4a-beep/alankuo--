@@ -58,7 +58,7 @@
       e.preventDefault();
   });
   
-  // Prevent double-tap zoom
+  // Prevent double-tap zoom (Chrome/Android requires passive: false)
   let lastTouchEnd = 0;
   document.addEventListener('touchend', function (event) {
     const now = (new Date()).getTime();
@@ -66,7 +66,14 @@
       event.preventDefault();
     }
     lastTouchEnd = now;
-  }, false);
+  }, { passive: false });
+
+  // Prevent pinch zoom via touchstart
+  document.addEventListener('touchstart', function(event) {
+      if (event.touches.length > 1) {
+          event.preventDefault();
+      }
+  }, { passive: false });
 
   // Prevent zooming via keyboard shortcuts (desktop/hybrid)
   document.addEventListener('keydown', function(event) {
