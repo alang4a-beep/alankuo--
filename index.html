@@ -1,10 +1,19 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>PolyKart Racing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="description" content="PolyKart Quiz - A 3D educational racing game. Learn while you drive!" />
+    <meta name="theme-color" content="#1a1a1a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <title>PolyKart 賽車學院</title>
+    
+    <!-- Dynamic Emoji Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <style>
@@ -15,11 +24,17 @@
         user-select: none; 
         -webkit-user-select: none;
         touch-action: none; /* Prevent default touch actions like scrolling */
+        font-family: system-ui, -apple-system, sans-serif;
       }
       #root { width: 100vw; height: 100vh; }
       
       /* Disable touch callout for iOS */
       * { -webkit-touch-callout: none; }
+      
+      /* Custom Scrollbar for lessons */
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); }
+      ::-webkit-scrollbar-thumb { background: rgba(255,215,0,0.5); border-radius: 3px; }
     </style>
   <script type="importmap">
 {

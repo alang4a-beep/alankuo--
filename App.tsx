@@ -5,7 +5,7 @@ import { Track } from './components/Track';
 import { Car } from './components/Car';
 import { Competitors } from './components/Competitors';
 import { EnvironmentWrapper } from './components/Environment';
-import { useGameStore } from './store';
+import { useGameStore, LESSON_CATALOG } from './store';
 import { GameStatus } from './types';
 import { soundManager } from './audio';
 import * as THREE from 'three';
@@ -123,24 +123,50 @@ const Minimap = () => {
 
 function HUD() {
   const { 
-      status, score, bestScore, speed, startGame, resetGame,
-      currentQuestion, feedbackMessage, boostTimer, penaltyTimer 
-  } = useGameStore();
+      status, score, bestScore, speed, startGame, resetGame, togglePause,
+      currentQuestion, feedbackMessage, boostTimer, penaltyTimer,
+      selectedLessonIds, toggleLesson, competitors, playerRank
+  } = useGameStore(state => {
+      // Memoize rank calculation here or in store selector if possible, 
+      // but simplistic recalc in component is okay for small N
+      const playerTotalProgress = state.playerChunkIndex + state.playerProgress;
+      let rank = 1;
+      state.competitors.forEach(comp => {
+          if ((comp.chunkId + comp.progress) > playerTotalProgress) rank++;
+      });
+      return { ...state, playerRank: rank };
+  });
 
   const [isMuted, setIsMuted] = useState(soundManager.getMuteState());
+
+  useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+          if (e.key === 'Escape') {
+              togglePause();
+          }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [togglePause]);
 
   const toggleSound = () => {
     const muted = soundManager.toggleMute();
     setIsMuted(muted);
   };
-
+  
   const currentSpeedKmH = Math.floor(Math.abs(speed * 200));
-  // 120 is the new theoretical max with boost (80 * 1.5)
   const speedPercent = Math.min(100, (currentSpeedKmH / 120) * 100);
 
   return (
     <div className="absolute inset-0 pointer-events-none p-6">
       
+      {/* Landscape Warning for Mobile */}
+      <div className="fixed inset-0 bg-black/90 z-[100] md:hidden flex flex-col items-center justify-center text-center p-8 pointer-events-auto landscape:hidden">
+          <div className="text-4xl mb-4">🔄</div>
+          <h2 className="text-xl font-bold text-white mb-2">Rotate Device</h2>
+          <p className="text-gray-400">Please play in landscape mode for the best experience.</p>
+      </div>
+
       {/* Top Left: Minimap */}
       <Minimap />
 
@@ -164,17 +190,30 @@ function HUD() {
       {/* Top Right: Score & Settings */}
       <div className="absolute top-6 right-6 flex flex-col items-end font-mono text-white gap-2 z-10">
         
-        {/* Mute Button */}
-        <button 
-            onClick={toggleSound}
-            className="pointer-events-auto bg-black/50 hover:bg-black/80 p-2 rounded-full border border-white/20 mb-2 transition-colors"
-        >
-            {isMuted ? (
-                <span className="text-red-400 text-xl">🔇</span>
-            ) : (
-                <span className="text-green-400 text-xl">🔊</span>
-            )}
-        </button>
+        {/* Buttons Group */}
+        <div className="flex gap-2 mb-2">
+            <button 
+                onClick={togglePause}
+                className="pointer-events-auto bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-colors text-xl"
+            >
+                {status === GameStatus.PAUSED ? '▶️' : '⏸️'}
+            </button>
+            <button 
+                onClick={toggleSound}
+                className="pointer-events-auto bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-colors text-xl"
+            >
+                {isMuted ? '🔇' : '🔊'}
+            </button>
+        </div>
+
+        {status === GameStatus.RACING && (
+             <div className="bg-black/70 p-2 md:px-4 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col items-end shadow-lg mb-2">
+                <div className="text-[10px] md:text-sm text-gray-400">POS</div>
+                <div className="text-2xl md:text-3xl font-bold text-white">
+                    <span className="text-yellow-400">{playerRank}</span><span className="text-base text-gray-500">/{competitors.length + 1}</span>
+                </div>
+            </div>
+        )}
 
         <div className="bg-black/70 p-2 md:p-4 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col items-end shadow-lg min-w-[100px] md:min-w-[150px]">
           <div className="text-[10px] md:text-sm text-gray-400">DISTANCE</div>
@@ -193,7 +232,7 @@ function HUD() {
 
       {/* Center: Feedback & Menus */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-30">
-        {feedbackMessage && (
+        {feedbackMessage && status === GameStatus.RACING && (
             <div className={`
                 fixed top-32 animate-pulse text-lg md:text-2xl font-black py-2 px-8 rounded-full border-2 shadow-2xl z-40
                 ${feedbackMessage.includes('CORRECT') ? 'bg-green-600/90 text-white border-green-300' : 'bg-red-600/90 text-white border-red-300'}
@@ -203,35 +242,87 @@ function HUD() {
         )}
 
         {status === GameStatus.IDLE && (
-          <div className="bg-black/80 p-8 rounded-2xl text-center border-2 border-yellow-500 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-300 max-w-sm md:max-w-md">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-4 tracking-tighter italic">
+          <div className="bg-black/80 p-8 rounded-2xl text-center border-2 border-yellow-500 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-300 max-w-sm md:max-w-3xl w-full">
+            <h1 className="text-4xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-2 tracking-tighter italic">
               POLY KART QUIZ
             </h1>
-            <h2 className="text-xl md:text-2xl text-white font-bold mb-4">ENDLESS MODE</h2>
-            <p className="text-gray-300 mb-6 text-sm md:text-base">
-                Drive into the correct box!<br/>
-                PC: Use <span className="font-bold text-white border border-white/20 rounded px-1">Arrow Keys</span><br/>
-                Mobile: Use On-screen Controls
-            </p>
+            <p className="text-gray-400 mb-8 font-mono text-sm tracking-widest">ARCADE RACING & LEARNING</p>
+            
+            <div className="flex flex-col md:flex-row gap-6 mb-8 text-left">
+                <div className="flex-1 bg-white/5 rounded-xl p-5 border border-white/10">
+                    <h3 className="text-yellow-400 font-bold mb-3 text-sm uppercase tracking-wide border-b border-white/10 pb-2">1. Select Lessons</h3>
+                    <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        {Object.values(LESSON_CATALOG).map(lesson => (
+                            <button
+                                key={lesson.id}
+                                onClick={() => toggleLesson(lesson.id)}
+                                className={`
+                                    text-left px-3 py-2 rounded-md border transition-all flex justify-between items-center text-sm
+                                    ${selectedLessonIds.includes(lesson.id) 
+                                        ? 'bg-yellow-500/20 border-yellow-500 text-white' 
+                                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}
+                                `}
+                            >
+                                <span className="font-bold">{lesson.title}</span>
+                                {selectedLessonIds.includes(lesson.id) && <span className="text-yellow-400">✓</span>}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex-1 flex flex-col gap-4">
+                    <div className="bg-white/5 rounded-xl p-5 border border-white/10 flex-1">
+                        <h3 className="text-yellow-400 font-bold mb-3 text-sm uppercase tracking-wide border-b border-white/10 pb-2">2. How to Play</h3>
+                        <ul className="text-gray-300 text-sm space-y-2">
+                            <li>🏁 <b>Race</b> through infinite tracks.</li>
+                            <li>❓ <b>Drive</b> into the correct answer box.</li>
+                            <li>⚡ <b>Correct</b> = Turbo Boost!</li>
+                            <li>🐢 <b>Wrong</b> = Speed Penalty.</li>
+                            <li>🏎️ <b>Drift</b> (Shift) to clear sharp turns.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
             <button 
               onClick={startGame}
-              className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-8 rounded-full text-xl transition-transform hover:scale-105 active:scale-95"
+              disabled={selectedLessonIds.length === 0}
+              className={`
+                w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black py-4 px-8 rounded-xl text-2xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-yellow-500/20
+                ${selectedLessonIds.length === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}
+              `}
             >
               START ENGINE
             </button>
           </div>
         )}
 
-        {status === GameStatus.FINISHED && (
-          <div className="bg-black/80 p-8 rounded-2xl text-center border-2 border-white shadow-2xl backdrop-blur-md">
-            <h1 className="text-4xl font-bold text-white mb-2">PAUSED</h1>
-            <p className="text-white text-xl mb-4">Distance: {score}m</p>
-            <button 
-              onClick={resetGame}
-              className="bg-white hover:bg-gray-200 text-black font-bold py-3 px-8 rounded-full text-lg transition-all"
-            >
-              RESTART
-            </button>
+        {(status === GameStatus.FINISHED || status === GameStatus.PAUSED) && (
+          <div className="bg-black/90 p-8 rounded-2xl text-center border border-white/20 shadow-2xl backdrop-blur-xl min-w-[300px]">
+            <h1 className="text-4xl font-bold text-white mb-2 tracking-wider">
+                {status === GameStatus.PAUSED ? 'PAUSED' : 'GAME OVER'}
+            </h1>
+            <div className="py-6 my-4 border-y border-white/10">
+                <div className="text-gray-400 text-sm mb-1">CURRENT RUN</div>
+                <div className="text-white text-5xl font-mono font-bold text-yellow-400">{score}m</div>
+            </div>
+            
+            <div className="flex flex-col gap-3">
+                {status === GameStatus.PAUSED && (
+                     <button 
+                        onClick={togglePause}
+                        className="bg-white hover:bg-gray-200 text-black font-bold py-3 px-8 rounded-xl text-lg transition-all"
+                    >
+                        RESUME
+                    </button>
+                )}
+                <button 
+                    onClick={resetGame}
+                    className="bg-transparent hover:bg-white/10 text-white border-2 border-white/30 font-bold py-3 px-8 rounded-xl text-lg transition-all"
+                >
+                    {status === GameStatus.PAUSED ? 'QUIT TO MENU' : 'RESTART'}
+                </button>
+            </div>
           </div>
         )}
       </div>
@@ -239,26 +330,20 @@ function HUD() {
       {/* Touch Controls (Mobile Only) */}
       {status === GameStatus.RACING && <TouchControls />}
 
-      {/* Speedometer - Repositioned to Bottom Center to accommodate touch controls */}
+      {/* Speedometer */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-10 pointer-events-none">
-        
-        {/* Status Indicators */}
         <div className="flex gap-2 items-center mb-1">
             {boostTimer > 0 && <div className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded animate-pulse shadow-[0_0_10px_orange]">NITRO</div>}
             {penaltyTimer > 0 && <div className="bg-gray-500 text-white text-xs font-bold px-2 py-0.5 rounded shadow-[0_0_10px_gray]">STALL</div>}
         </div>
-
-        {/* Speedometer Gauge */}
         <div className="relative w-48 h-24 md:w-64 md:h-32 bg-gradient-to-t from-black/90 to-transparent rounded-t-full border-t-2 border-white/20 overflow-hidden backdrop-blur-sm">
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[90%] border-t-[15px] md:border-t-[20px] border-l-[15px] md:border-l-[20px] border-r-[15px] md:border-r-[20px] border-white/10 rounded-t-full border-b-0"></div>
-            
             <div 
                 className="absolute bottom-0 left-0 w-full h-full origin-bottom transition-all duration-100 ease-linear opacity-80"
                 style={{
                     background: `conic-gradient(from 270deg at 50% 100%, transparent 0deg, ${speedPercent > 80 ? 'orange' : '#00ccff'} ${speedPercent * 1.8}deg, transparent 0deg)`
                 }}
             ></div>
-
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-center">
                 <div className="text-4xl md:text-5xl font-black text-white italic tracking-tighter shadow-black drop-shadow-lg">
                     {currentSpeedKmH}
@@ -271,15 +356,9 @@ function HUD() {
   );
 }
 
-const Loader = () => (
-    <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a] z-50">
-        <div className="text-white font-bold animate-pulse">LOADING TRACK...</div>
-    </div>
-)
-
 const App: React.FC = () => {
   return (
-    <div className="w-full h-full relative bg-gray-900 select-none">
+    <div className="w-full h-full relative bg-gray-900 select-none overflow-hidden">
       <Canvas shadows camera={{ position: [0, 5, 10], fov: 50 }}>
         <color attach="background" args={['#1a1a1a']} />
         <Suspense fallback={null}>

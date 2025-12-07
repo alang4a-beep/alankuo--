@@ -58,6 +58,12 @@ export interface QuizQuestion {
   correctIndex: number;
 }
 
+export interface LessonData {
+    id: string;
+    title: string;
+    questions: QuizQuestion[];
+}
+
 export interface TrackChunkData {
   id: number;
   type: ChunkType;
@@ -85,5 +91,6 @@ export interface Competitor {
 export enum GameStatus {
   IDLE = 'IDLE',
   RACING = 'RACING',
+  PAUSED = 'PAUSED',
   FINISHED = 'FINISHED',
 }

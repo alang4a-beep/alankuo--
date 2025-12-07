@@ -257,21 +257,20 @@ export const Car: React.FC = () => {
   useFrame((state, delta) => {
     if (!group.current) return;
 
-    tickTimers();
-
-    let currentMaxSpeed = MAX_SPEED;
-    if (boostTimer > 0) currentMaxSpeed *= BOOST_MULTIPLIER;
-    if (penaltyTimer > 0) currentMaxSpeed *= PENALTY_MULTIPLIER;
-
-    // Update Engine Sound Pitch
+    // --- PHYSICS LOOP ---
+    // Only run physics if actually racing
     if (gameStatus === GameStatus.RACING) {
+        
+        tickTimers();
+
+        let currentMaxSpeed = MAX_SPEED;
+        if (boostTimer > 0) currentMaxSpeed *= BOOST_MULTIPLIER;
+        if (penaltyTimer > 0) currentMaxSpeed *= PENALTY_MULTIPLIER;
+
+        // Update Engine Sound Pitch
         soundManager.updateEnginePitch(speed.current / MAX_SPEED);
-    } else {
-        soundManager.updateEnginePitch(0);
-    }
 
-    // 1. Controls & Horizontal Physics
-    if (gameStatus === GameStatus.RACING) {
+        // 1. Controls & Horizontal Physics
         if (controls.forward) {
             speed.current = Math.min(speed.current + ACCELERATION, currentMaxSpeed);
         } else if (controls.backward) {
@@ -349,11 +348,168 @@ export const Car: React.FC = () => {
             driftDuration.current = 0;
             steerDuration.current = 0;
         }
+
+        // 2. Vertical Physics (Gravity & Jumping)
+        position.current.y += velocityY.current;
+        
+        // Apply gravity if in air
+        if (position.current.y > 0) {
+            velocityY.current -= GRAVITY;
+        } 
+        
+        // Floor collision
+        if (position.current.y < 0) {
+            position.current.y = 0;
+            velocityY.current = 0;
+        }
+
+        // 3. Collision Detection
+        const currentPos = position.current.clone();
+        const relevantChunks = chunks.filter(c => Math.abs(c.id - playerChunkIndex) <= 1);
+        
+        let minDistance = Infinity;
+        let closestPoint = new THREE.Vector3();
+        let activeChunkId = playerChunkIndex;
+        let progressInChunk = 0; 
+
+        for (const chunk of relevantChunks) {
+            // Road Logic with Ghosts support
+            const useGhost = chunk.renderPoints && chunk.renderPoints.length > 0;
+            const points = useGhost ? chunk.renderPoints! : chunk.controlPoints;
+            const curve = new THREE.CatmullRomCurve3(points, false);
+            
+            const divisions = 20;
+            const len = points.length;
+            // Map division loop to valid segment t range
+            const tStart = useGhost ? 1 / (len - 1) : 0;
+            const tEnd = useGhost ? (len - 2) / (len - 1) : 1;
+
+            for (let i = 0; i <= divisions; i++) {
+                const linearT = i / divisions;
+                const t = tStart + linearT * (tEnd - tStart);
+
+                const p = curve.getPointAt(t);
+                const flatP = new THREE.Vector3(p.x, 0, p.z);
+                const flatCar = new THREE.Vector3(currentPos.x, 0, currentPos.z);
+                const d = flatP.distanceTo(flatCar);
+                
+                if (d < minDistance) {
+                    minDistance = d;
+                    closestPoint = flatP;
+                    if (d < TRACK_WIDTH / 2 + 10) { // Broad phase
+                        activeChunkId = chunk.id;
+                        progressInChunk = linearT; // Use linear progress for gameplay logic
+                    }
+                }
+            }
+
+            // Quiz Items
+            chunk.items.forEach(item => {
+                if (!item.isCollected) {
+                    const dist = currentPos.distanceTo(item.position);
+                    if (dist < 3.5) { 
+                        collectItem(chunk.id, item.id);
+                        answerQuestion(item.isCorrect);
+                    }
+                }
+            });
+
+            // Obstacles (Coins, Ramps)
+            chunk.obstacles.forEach(obs => {
+                if (obs.isCollected) return;
+
+                const dist = currentPos.distanceTo(obs.position);
+                
+                if (obs.type === ObstacleType.COIN) {
+                    if (dist < 2.0) {
+                        collectCoin(chunk.id, obs.id);
+                    }
+                }
+                else if (obs.type === ObstacleType.RAMP) {
+                    if (dist < 3.0 && position.current.y < 1.0) {
+                        if (Math.abs(speed.current) > 0.1) {
+                             velocityY.current = JUMP_FORCE;
+                             soundManager.playSfx('jump');
+                             speed.current = Math.min(speed.current * 1.2, currentMaxSpeed * 1.5);
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- Competitor Collision ---
+        competitors.forEach(comp => {
+            if (Math.abs(comp.chunkId - playerChunkIndex) <= 1) {
+                const chunk = chunks.find(c => c.id === comp.chunkId);
+                if (chunk) {
+                    const points = chunk.renderPoints || chunk.controlPoints;
+                    const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
+                    const useGhost = !!chunk.renderPoints;
+                    const len = points.length;
+                    const tStart = useGhost ? 1 / (len - 1) : 0;
+                    const tEnd = useGhost ? (len - 2) / (len - 1) : 1;
+                    const realT = tStart + comp.progress * (tEnd - tStart);
+                    const p = curve.getPointAt(realT);
+                    const tan = curve.getTangentAt(realT).normalize();
+                    const up = new THREE.Vector3(0, 1, 0);
+                    const side = new THREE.Vector3().crossVectors(up, tan).normalize();
+                    const botPos = p.add(side.multiplyScalar(comp.laneOffset));
+                    
+                    const dist = currentPos.distanceTo(botPos);
+                    if (dist < 1.8) { 
+                        const pushDir = currentPos.clone().sub(botPos).normalize();
+                        position.current.add(pushDir.multiplyScalar(0.2));
+                        speed.current *= 0.9;
+                        const now = state.clock.elapsedTime;
+                        if (now - lastCompHitTime.current > 0.5) {
+                            soundManager.playSfx('crash');
+                            lastCompHitTime.current = now;
+                        }
+                    }
+                }
+            }
+        });
+        
+        // 4. Wall Collision
+        const allowedDist = (TRACK_WIDTH / 2) - 1.0; 
+        
+        if (minDistance > allowedDist && position.current.y < 2) {
+            const pushDir = currentPos.clone().sub(closestPoint).normalize();
+            const clampedPos = closestPoint.clone().add(pushDir.multiplyScalar(allowedDist));
+            position.current.x = clampedPos.x;
+            position.current.z = clampedPos.z;
+
+            speed.current *= 0.95; 
+            
+            if (Math.abs(speed.current) > 0.1) {
+                const now = state.clock.elapsedTime;
+                if (now - lastScrapeTime.current > 0.4) {
+                     soundManager.playSfx('scrape');
+                     lastScrapeTime.current = now;
+                }
+            }
+        }
+
+        // 5. Move Car
+        const velocity = new THREE.Vector3(0, 0, 1)
+          .applyAxisAngle(new THREE.Vector3(0, 1, 0), courseRotation.current)
+          .multiplyScalar(speed.current);
+        
+        position.current.x += velocity.x;
+        position.current.z += velocity.z;
+        
+        setGameSpeed(speed.current);
+        setCarPosition(position.current.x, position.current.z, activeChunkId, progressInChunk);
+
     } else {
+        // --- NON-RACING STATES ---
+        soundManager.updateEnginePitch(0);
+        
         if (gameStatus === GameStatus.FINISHED) {
              speed.current = Math.max(0, speed.current - FRICTION * 2);
              courseRotation.current = rotation.current; // No drift when finished
              driftDuration.current = 0;
+             // Still apply basic friction logic to stop the car
         } else if (gameStatus === GameStatus.IDLE) {
             if (position.current.x !== 0 || position.current.z !== 0) {
                 position.current.set(0,0,0);
@@ -365,173 +521,10 @@ export const Car: React.FC = () => {
                 steerDuration.current = 0;
             }
         }
+        // If PAUSED, we simply skip updates, freezing the car in place.
     }
 
-    // 2. Vertical Physics (Gravity & Jumping)
-    position.current.y += velocityY.current;
-    
-    // Apply gravity if in air
-    if (position.current.y > 0) {
-        velocityY.current -= GRAVITY;
-    } 
-    
-    // Floor collision
-    if (position.current.y < 0) {
-        position.current.y = 0;
-        velocityY.current = 0;
-    }
-
-    // 3. Collision Detection
-    const currentPos = position.current.clone();
-    const relevantChunks = chunks.filter(c => Math.abs(c.id - playerChunkIndex) <= 1);
-    
-    let minDistance = Infinity;
-    let closestPoint = new THREE.Vector3();
-    let activeChunkId = playerChunkIndex;
-    let progressInChunk = 0; 
-
-    for (const chunk of relevantChunks) {
-        // Road Logic with Ghosts support
-        const useGhost = chunk.renderPoints && chunk.renderPoints.length > 0;
-        const points = useGhost ? chunk.renderPoints! : chunk.controlPoints;
-        const curve = new THREE.CatmullRomCurve3(points, false);
-        
-        const divisions = 20;
-        const len = points.length;
-        // Map division loop to valid segment t range
-        const tStart = useGhost ? 1 / (len - 1) : 0;
-        const tEnd = useGhost ? (len - 2) / (len - 1) : 1;
-
-        for (let i = 0; i <= divisions; i++) {
-            const linearT = i / divisions;
-            const t = tStart + linearT * (tEnd - tStart);
-
-            const p = curve.getPointAt(t);
-            const flatP = new THREE.Vector3(p.x, 0, p.z);
-            const flatCar = new THREE.Vector3(currentPos.x, 0, currentPos.z);
-            const d = flatP.distanceTo(flatCar);
-            
-            if (d < minDistance) {
-                minDistance = d;
-                closestPoint = flatP;
-                if (d < TRACK_WIDTH / 2 + 10) { // Broad phase
-                    activeChunkId = chunk.id;
-                    progressInChunk = linearT; // Use linear progress for gameplay logic
-                }
-            }
-        }
-
-        // Quiz Items
-        chunk.items.forEach(item => {
-            if (!item.isCollected) {
-                const dist = currentPos.distanceTo(item.position);
-                if (dist < 3.5) { 
-                    collectItem(chunk.id, item.id);
-                    answerQuestion(item.isCorrect);
-                }
-            }
-        });
-
-        // Obstacles (Coins, Ramps)
-        chunk.obstacles.forEach(obs => {
-            if (obs.isCollected) return;
-
-            const dist = currentPos.distanceTo(obs.position);
-            
-            if (obs.type === ObstacleType.COIN) {
-                if (dist < 2.0) {
-                    collectCoin(chunk.id, obs.id);
-                }
-            }
-            else if (obs.type === ObstacleType.RAMP) {
-                if (dist < 3.0 && position.current.y < 1.0) {
-                    if (Math.abs(speed.current) > 0.1) {
-                         velocityY.current = JUMP_FORCE;
-                         soundManager.playSfx('jump');
-                         speed.current = Math.min(speed.current * 1.2, currentMaxSpeed * 1.5);
-                    }
-                }
-            }
-        });
-    }
-
-    // --- Competitor Collision ---
-    // Iterate through nearby competitors to check for collisions
-    competitors.forEach(comp => {
-        // Broad phase: only check bots in current or nearby chunks
-        if (Math.abs(comp.chunkId - playerChunkIndex) <= 1) {
-            // Calculate bot position (Expensive, but necessary for physics)
-            const chunk = chunks.find(c => c.id === comp.chunkId);
-            if (chunk) {
-                const points = chunk.renderPoints || chunk.controlPoints;
-                const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
-                
-                const useGhost = !!chunk.renderPoints;
-                const len = points.length;
-                const tStart = useGhost ? 1 / (len - 1) : 0;
-                const tEnd = useGhost ? (len - 2) / (len - 1) : 1;
-                
-                const realT = tStart + comp.progress * (tEnd - tStart);
-                const p = curve.getPointAt(realT);
-                const tan = curve.getTangentAt(realT).normalize();
-                const up = new THREE.Vector3(0, 1, 0);
-                const side = new THREE.Vector3().crossVectors(up, tan).normalize();
-                
-                // Bot World Position
-                const botPos = p.add(side.multiplyScalar(comp.laneOffset));
-                
-                // Check distance
-                const dist = currentPos.distanceTo(botPos);
-                if (dist < 1.8) { // Collision Radius
-                    // Repulsion vector
-                    const pushDir = currentPos.clone().sub(botPos).normalize();
-                    position.current.add(pushDir.multiplyScalar(0.2)); // Push player away
-                    
-                    // Slow down slightly
-                    speed.current *= 0.9;
-                    
-                    const now = state.clock.elapsedTime;
-                    if (now - lastCompHitTime.current > 0.5) {
-                        soundManager.playSfx('crash');
-                        lastCompHitTime.current = now;
-                    }
-                }
-            }
-        }
-    });
-    
-    // 4. Wall Collision
-    const allowedDist = (TRACK_WIDTH / 2) - 1.0; 
-    
-    if (minDistance > allowedDist && position.current.y < 2) {
-        const pushDir = currentPos.clone().sub(closestPoint).normalize();
-        const clampedPos = closestPoint.clone().add(pushDir.multiplyScalar(allowedDist));
-        position.current.x = clampedPos.x;
-        position.current.z = clampedPos.z;
-
-        speed.current *= 0.95; 
-        
-        if (Math.abs(speed.current) > 0.1) {
-            const now = state.clock.elapsedTime;
-            if (now - lastScrapeTime.current > 0.4) {
-                 soundManager.playSfx('scrape');
-                 lastScrapeTime.current = now;
-            }
-        }
-    }
-
-    // 5. Move Car
-    const velocity = new THREE.Vector3(0, 0, 1)
-      .applyAxisAngle(new THREE.Vector3(0, 1, 0), courseRotation.current)
-      .multiplyScalar(speed.current);
-    
-    position.current.x += velocity.x;
-    position.current.z += velocity.z;
-    
-    setGameSpeed(speed.current);
-    setCarPosition(position.current.x, position.current.z, activeChunkId, progressInChunk);
-
-    // 6. Update Visuals
+    // --- RENDER UPDATES (Visuals always update even if paused, but positions won't change) ---
     group.current.position.copy(position.current);
     group.current.rotation.y = rotation.current;
     

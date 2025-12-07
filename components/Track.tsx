@@ -268,7 +268,14 @@ const TrackChunk: React.FC<{ data: TrackChunkData }> = ({ data }) => {
                       <edgesGeometry args={[new THREE.BoxGeometry(6.4, 4, 1)]} />
                       <lineBasicMaterial color="white" linewidth={2} />
                   </lineSegments>
-                  <SafeText position={[0, 4.5, 0]} fontSize={3} color="white" anchorX="center" anchorY="middle" outlineWidth={0.1} outlineColor="black">
+                  <SafeText 
+                    position={[0, 2, 0.6]} 
+                    fontSize={3} 
+                    color="black" 
+                    anchorX="center" 
+                    anchorY="middle" 
+                    outlineWidth={0}
+                  >
                     {item.text}
                   </SafeText>
               </group>
