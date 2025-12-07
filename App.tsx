@@ -50,20 +50,29 @@ const TouchControls = () => {
     );
 
     return (
-        <div className="absolute inset-0 pointer-events-none z-50 flex flex-col justify-end pb-6 px-6 landscape:pb-2 landscape:px-12">
-            <div className="flex justify-between items-end w-full pointer-events-auto">
+        <div 
+            className="absolute inset-x-0 bottom-0 pointer-events-none z-50 flex flex-col justify-end px-4 pb-12 landscape:pb-[max(1.5rem,env(safe-area-inset-bottom))] landscape:px-8"
+        >
+            {/* Scale down controls on mobile (85% size) to leave more screen space */}
+            <div className="flex justify-between items-end w-full pointer-events-auto scale-[0.85] origin-bottom md:scale-100">
                 {/* Left Controls: Steering */}
                 <div className="flex gap-4">
-                    <Btn k="ArrowLeft" label="←" className="w-20 h-20 text-3xl" />
-                    <Btn k="ArrowRight" label="→" className="w-20 h-20 text-3xl" />
+                    <Btn k="ArrowLeft" label="←" className="w-20 h-20 text-3xl landscape:w-24 landscape:h-24" />
+                    <Btn k="ArrowRight" label="→" className="w-20 h-20 text-3xl landscape:w-24 landscape:h-24" />
                 </div>
 
                 {/* Right Controls: Gas, Brake, Drift */}
                 <div className="flex gap-4 items-end">
-                    <Btn k="Shift" label="DRIFT" className="w-16 h-16 text-xs bg-yellow-500/30 border-yellow-400/50 text-yellow-100" />
-                    <div className="flex flex-col gap-4 items-center landscape:gap-2">
-                        <Btn k="ArrowUp" label="GAS" className="w-20 h-24 text-xl bg-green-500/30 border-green-400/50 landscape:h-20" />
-                        <Btn k="ArrowDown" label="BRAKE" className="w-16 h-12 text-xs bg-red-500/30 border-red-400/50" />
+                    {/* Drift Button */}
+                    <Btn k="Shift" label="DRIFT" className="w-16 h-16 text-xs bg-yellow-500/30 border-yellow-400/50 text-yellow-100 landscape:w-20 landscape:h-20 landscape:mb-2" />
+                    
+                    {/* Gas & Brake Group 
+                        Portrait: flex-col-reverse (Brake Bottom, Gas Top)
+                        Landscape: flex-row (Brake Left, Gas Right) 
+                    */}
+                    <div className="flex flex-col-reverse gap-4 items-center landscape:flex-row landscape:items-end landscape:gap-6">
+                        <Btn k="ArrowDown" label="BRAKE" className="w-16 h-12 text-xs bg-red-500/30 border-red-400/50 landscape:w-20 landscape:h-20 landscape:text-sm landscape:rounded-full" />
+                        <Btn k="ArrowUp" label="GAS" className="w-20 h-24 text-xl bg-green-500/30 border-green-400/50 landscape:w-24 landscape:h-24 landscape:rounded-full" />
                     </div>
                 </div>
             </div>
@@ -101,7 +110,7 @@ const Minimap = () => {
   }, [chunks, carPosition, playerChunkIndex]);
 
   return (
-    <div className="absolute top-6 left-6 w-32 h-32 md:w-48 md:h-48 bg-black/40 rounded-full border-2 border-white/20 backdrop-blur-md overflow-hidden shadow-lg flex items-center justify-center z-10 hidden sm:flex">
+    <div className="absolute top-4 left-4 w-24 h-24 md:w-48 md:h-48 bg-black/40 rounded-full border-2 border-white/20 backdrop-blur-md overflow-hidden shadow-lg flex items-center justify-center z-10 hidden sm:flex">
         <svg 
             width="100%" 
             height="100%" 
@@ -158,17 +167,17 @@ function HUD() {
   const speedPercent = Math.min(100, (currentSpeedKmH / 120) * 100);
 
   return (
-    <div className="absolute inset-0 pointer-events-none p-6">
+    <div className="absolute inset-0 pointer-events-none p-4 md:p-6">
       
       {/* Top Left: Minimap */}
       <Minimap />
 
       {/* Top Center: Quiz Question Box */}
       {status === GameStatus.RACING && (
-        <div className="absolute top-4 landscape:top-2 left-1/2 -translate-x-1/2 flex justify-center z-20 w-full px-4 pointer-events-none">
-          <div className="bg-black/80 border-2 border-yellow-400 rounded-xl p-3 md:p-4 w-full max-w-[400px] text-center backdrop-blur-md shadow-2xl pointer-events-auto landscape:w-auto landscape:max-w-none landscape:flex landscape:items-center landscape:gap-4 landscape:p-2 landscape:bg-black/60 landscape:rounded-full landscape:border-white/30">
+        <div className="absolute top-4 landscape:top-2 left-1/2 -translate-x-1/2 flex justify-center z-20 w-full px-4 pointer-events-none scale-[0.85] origin-top md:scale-100">
+          <div className="bg-black/80 border-2 border-yellow-400 rounded-xl p-2 md:p-4 w-full max-w-[320px] md:max-w-[400px] text-center backdrop-blur-md shadow-2xl pointer-events-auto landscape:w-auto landscape:max-w-none landscape:flex landscape:items-center landscape:gap-4 landscape:bg-black/60 landscape:rounded-full landscape:border-white/30">
               <div className="text-gray-400 text-[10px] md:text-xs uppercase tracking-widest mb-1 landscape:hidden">Current Challenge</div>
-              <div className="text-2xl md:text-3xl font-bold text-white landscape:text-xl landscape:mb-0 whitespace-nowrap">
+              <div className="text-xl md:text-3xl font-bold text-white landscape:text-xl landscape:mb-0 whitespace-nowrap">
                   {currentQuestion.question}
               </div>
               <div className="flex justify-center gap-2 md:gap-4 mt-2 landscape:mt-0 text-xs md:text-sm text-yellow-200">
@@ -181,7 +190,7 @@ function HUD() {
       )}
 
       {/* Top Right: Score & Settings */}
-      <div className="absolute top-6 right-6 flex flex-col items-end font-mono text-white gap-2 z-10">
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 flex flex-col items-end font-mono text-white gap-2 z-10 scale-[0.8] origin-top-right md:scale-100">
         
         {/* Buttons Group */}
         <div className="flex gap-2 mb-2">
@@ -227,7 +236,7 @@ function HUD() {
       <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-30">
         {feedbackMessage && status === GameStatus.RACING && (
             <div className={`
-                fixed top-32 landscape:top-16 animate-pulse text-lg md:text-2xl font-black py-2 px-8 rounded-full border-2 shadow-2xl z-40
+                fixed top-24 landscape:top-16 animate-pulse text-lg md:text-2xl font-black py-2 px-8 rounded-full border-2 shadow-2xl z-40
                 ${feedbackMessage.includes('CORRECT') ? 'bg-green-600/90 text-white border-green-300' : 'bg-red-600/90 text-white border-red-300'}
             `}>
                 {feedbackMessage}
@@ -235,7 +244,7 @@ function HUD() {
         )}
 
         {status === GameStatus.IDLE && (
-          <div className="bg-black/80 p-4 md:p-8 rounded-2xl text-center border-2 border-yellow-500 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-300 w-[95%] max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-black/80 p-4 md:p-8 rounded-2xl text-center border-2 border-yellow-500 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-300 w-[95%] max-w-3xl max-h-[90dvh] overflow-y-auto custom-scrollbar">
             <h1 className="text-3xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-2 tracking-tighter italic">
               POLY KART QUIZ
             </h1>
@@ -323,8 +332,8 @@ function HUD() {
       {/* Touch Controls (Mobile Only) */}
       {status === GameStatus.RACING && <TouchControls />}
 
-      {/* Speedometer */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-10 pointer-events-none">
+      {/* Speedometer - Scaled down on mobile and pushed up */}
+      <div className="absolute bottom-12 landscape:bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-10 pointer-events-none scale-[0.75] origin-bottom md:scale-100">
         <div className="flex gap-2 items-center mb-1">
             {boostTimer > 0 && <div className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded animate-pulse shadow-[0_0_10px_orange]">NITRO</div>}
             {penaltyTimer > 0 && <div className="bg-gray-500 text-white text-xs font-bold px-2 py-0.5 rounded shadow-[0_0_10px_gray]">STALL</div>}
@@ -351,7 +360,7 @@ function HUD() {
 
 const App: React.FC = () => {
   return (
-    <div className="w-full h-full relative bg-gray-900 select-none overflow-hidden">
+    <div className="w-[100dvw] h-[100dvh] relative bg-gray-900 select-none overflow-hidden">
       <Canvas shadows camera={{ position: [0, 5, 10], fov: 50 }}>
         <color attach="background" args={['#1a1a1a']} />
         <Suspense fallback={null}>
