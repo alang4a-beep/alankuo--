@@ -360,7 +360,7 @@ function HUD() {
 
 const App: React.FC = () => {
   return (
-    <div className="w-[100dvw] h-[100dvh] relative bg-gray-900 select-none overflow-hidden">
+    <div className="w-[100dvw] h-[100dvh] relative bg-gray-900 select-none overflow-hidden touch-none">
       <Canvas shadows camera={{ position: [0, 5, 10], fov: 50 }}>
         <color attach="background" args={['#1a1a1a']} />
         <Suspense fallback={null}>

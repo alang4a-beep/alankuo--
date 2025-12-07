@@ -47,10 +47,33 @@
     "@react-three/drei": "https://esm.sh/@react-three/drei@9.99.0?external=react,react-dom,three,@react-three/fiber",
     "zustand": "https://esm.sh/zustand@4.5.0?external=react",
     "vite": "https://aistudiocdn.com/vite@^7.2.6",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/"
   }
 }
+</script>
+<script>
+  // Strict Zoom Prevention for iOS
+  document.addEventListener('gesturestart', function (e) {
+      e.preventDefault();
+  });
+  
+  // Prevent double-tap zoom
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', function (event) {
+    const now = (new Date()).getTime();
+    if (now - lastTouchEnd <= 300) {
+      event.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, false);
+
+  // Prevent zooming via keyboard shortcuts (desktop/hybrid)
+  document.addEventListener('keydown', function(event) {
+    if (event.ctrlKey && (event.key === '+' || event.key === '-' || event.key === '0')) {
+      event.preventDefault();
+    }
+  });
 </script>
 </head>
   <body>
