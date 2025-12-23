@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useMemo, Suspense, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Track } from './components/Track';
@@ -9,133 +10,46 @@ import { GameStatus } from './types';
 import { soundManager } from './audio';
 import * as THREE from 'three';
 
-// --- Touch Controls Component ---
 const TouchControls = () => {
-    // Helper to simulate key events
     const triggerKey = (key: string, type: 'keydown' | 'keyup') => {
         const event = new KeyboardEvent(type, { key, bubbles: true });
         window.dispatchEvent(event);
     };
-
-    const handleBtnDown = (key: string) => (e: React.PointerEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        triggerKey(key, 'keydown');
-    };
-
-    const handleBtnUp = (key: string) => (e: React.PointerEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        triggerKey(key, 'keyup');
-    };
-
+    const handleBtnDown = (key: string) => (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); triggerKey(key, 'keydown'); };
+    const handleBtnUp = (key: string) => (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); triggerKey(key, 'keyup'); };
     const Btn = ({ k, label, className }: { k: string, label: string, className: string }) => (
-        <button
-            className={`select-none touch-none active:scale-95 transition-transform bg-white/20 backdrop-blur-md border border-white/30 rounded-full flex items-center justify-center text-white font-bold shadow-lg active:bg-white/40 ${className}`}
-            style={{ 
-                touchAction: 'none', 
-                WebkitUserSelect: 'none', 
-                userSelect: 'none',
-                WebkitTouchCallout: 'none' 
-            }}
-            onPointerDown={handleBtnDown(k)}
-            onPointerUp={handleBtnUp(k)}
-            onPointerLeave={handleBtnUp(k)} 
-            onPointerCancel={handleBtnUp(k)}
-            onContextMenu={(e) => e.preventDefault()}
-        >
-            {label}
-        </button>
+        <button className={`select-none touch-none active:scale-95 transition-transform bg-white/20 backdrop-blur-md border border-white/30 rounded-full flex items-center justify-center text-white font-bold shadow-lg active:bg-white/40 ${className}`} onPointerDown={handleBtnDown(k)} onPointerUp={handleBtnUp(k)} onPointerLeave={handleBtnUp(k)} onPointerCancel={handleBtnUp(k)} onContextMenu={(e) => e.preventDefault()} > {label} </button>
     );
 
-    // --- Joystick Logic ---
     const [joystickVec, setJoystickVec] = useState({ x: 0, y: 0 });
     const joystickActive = useRef(false);
     const startPos = useRef({ x: 0, y: 0 });
-
-    const handleJoystickDown = (e: React.PointerEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        joystickActive.current = true;
-        startPos.current = { x: e.clientX, y: e.clientY };
-        (e.target as Element).setPointerCapture(e.pointerId);
-    };
-
+    const handleJoystickDown = (e: React.PointerEvent) => { e.preventDefault(); e.stopPropagation(); joystickActive.current = true; startPos.current = { x: e.clientX, y: e.clientY }; (e.target as Element).setPointerCapture(e.pointerId); };
     const handleJoystickMove = (e: React.PointerEvent) => {
-        if (!joystickActive.current) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        const maxDist = 40; // Max radius of joystick movement
-        const dx = e.clientX - startPos.current.x;
-        const dy = e.clientY - startPos.current.y;
-        
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const clampedDist = Math.min(dist, maxDist);
-        const angle = Math.atan2(dy, dx);
-        
-        const clampedX = Math.cos(angle) * clampedDist;
-        const clampedY = Math.sin(angle) * clampedDist;
-        
+        if (!joystickActive.current) return; e.preventDefault(); e.stopPropagation();
+        const maxDist = 40; const dx = e.clientX - startPos.current.x; const dy = e.clientY - startPos.current.y;
+        const dist = Math.sqrt(dx * dx + dy * dy); const clampedDist = Math.min(dist, maxDist); const angle = Math.atan2(dy, dx);
+        const clampedX = Math.cos(angle) * clampedDist; const clampedY = Math.sin(angle) * clampedDist;
         setJoystickVec({ x: clampedX, y: clampedY });
-
-        // Steering Logic based on X axis
         const threshold = 10;
-        if (clampedX < -threshold) {
-            triggerKey('ArrowLeft', 'keydown');
-            triggerKey('ArrowRight', 'keyup');
-        } else if (clampedX > threshold) {
-            triggerKey('ArrowRight', 'keydown');
-            triggerKey('ArrowLeft', 'keyup');
-        } else {
-            triggerKey('ArrowLeft', 'keyup');
-            triggerKey('ArrowRight', 'keyup');
-        }
+        if (clampedX < -threshold) { triggerKey('ArrowLeft', 'keydown'); triggerKey('ArrowRight', 'keyup'); }
+        else if (clampedX > threshold) { triggerKey('ArrowRight', 'keydown'); triggerKey('ArrowLeft', 'keyup'); }
+        else { triggerKey('ArrowLeft', 'keyup'); triggerKey('ArrowRight', 'keyup'); }
     };
-
-    const handleJoystickEnd = (e: React.PointerEvent) => {
-        if (!joystickActive.current) return;
-        joystickActive.current = false;
-        setJoystickVec({ x: 0, y: 0 });
-        triggerKey('ArrowLeft', 'keyup');
-        triggerKey('ArrowRight', 'keyup');
-        (e.target as Element).releasePointerCapture(e.pointerId);
-    };
+    const handleJoystickEnd = (e: React.PointerEvent) => { if (!joystickActive.current) return; joystickActive.current = false; setJoystickVec({ x: 0, y: 0 }); triggerKey('ArrowLeft', 'keyup'); triggerKey('ArrowRight', 'keyup'); (e.target as Element).releasePointerCapture(e.pointerId); };
 
     return (
-        <div 
-            className="absolute inset-x-0 bottom-0 pointer-events-none z-50 flex flex-col justify-end px-4 pb-20 landscape:pb-[max(1.5rem,env(safe-area-inset-bottom))] landscape:px-8"
-        >
-            {/* Scale down controls on mobile (85% size) to leave more screen space */}
+        <div className="absolute inset-x-0 bottom-0 pointer-events-none z-50 flex flex-col justify-end px-4 pb-20 landscape:pb-[max(1.5rem,env(safe-area-inset-bottom))] landscape:px-8">
             <div className="flex justify-between items-end w-full pointer-events-auto scale-[0.85] origin-bottom md:scale-100">
-                {/* Left Controls: Virtual Joystick */}
-                <div 
-                    className="relative w-32 h-32 rounded-full bg-black/30 border-2 border-white/20 backdrop-blur-md flex items-center justify-center touch-none landscape:w-36 landscape:h-36"
-                    onPointerDown={handleJoystickDown}
-                    onPointerMove={handleJoystickMove}
-                    onPointerUp={handleJoystickEnd}
-                    onPointerCancel={handleJoystickEnd}
-                    style={{ touchAction: 'none' }}
-                >
-                    {/* Joystick Knob */}
-                    <div 
-                        className="absolute w-12 h-12 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.6)] border-2 border-white/60 pointer-events-none transition-transform duration-75 landscape:w-16 landscape:h-16"
-                        style={{ transform: `translate(${joystickVec.x}px, ${joystickVec.y}px)` }}
-                    />
-                    {/* Direction Indicators */}
-                    <div className="absolute left-2 text-white/30 text-xl font-bold">◀</div>
-                    <div className="absolute right-2 text-white/30 text-xl font-bold">▶</div>
+                <div className="relative w-32 h-32 rounded-full bg-black/30 border-2 border-white/20 backdrop-blur-md flex items-center justify-center touch-none" onPointerDown={handleJoystickDown} onPointerMove={handleJoystickMove} onPointerUp={handleJoystickEnd} onPointerCancel={handleJoystickEnd}>
+                    <div className="absolute w-12 h-12 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.6)] border-2 border-white/60 pointer-events-none transition-transform duration-75" style={{ transform: `translate(${joystickVec.x}px, ${joystickVec.y}px)` }} />
+                    <div className="absolute left-2 text-white/30 text-xl font-bold">◀</div><div className="absolute right-2 text-white/30 text-xl font-bold">▶</div>
                 </div>
-
-                {/* Right Controls: Gas, Brake, Drift */}
                 <div className="flex gap-4 items-end">
-                    {/* Drift Button */}
-                    <Btn k="Shift" label="DRIFT" className="w-16 h-16 text-xs bg-yellow-500/30 border-yellow-400/50 text-yellow-100 landscape:w-20 landscape:h-20 landscape:mb-2" />
-                    
-                    {/* Gas & Brake Group */}
+                    <Btn k="Shift" label="DRIFT" className="w-16 h-16 text-xs bg-yellow-500/30 border-yellow-400/50 text-yellow-100" />
                     <div className="flex flex-col-reverse gap-4 items-center landscape:flex-row landscape:items-end landscape:gap-6">
-                        <Btn k="ArrowDown" label="BRAKE" className="w-16 h-12 text-xs bg-red-500/30 border-red-400/50 landscape:w-20 landscape:h-20 landscape:text-sm landscape:rounded-full" />
-                        <Btn k="ArrowUp" label="GAS" className="w-20 h-24 text-xl bg-green-500/30 border-green-400/50 landscape:w-24 landscape:h-24 landscape:rounded-full" />
+                        <Btn k="ArrowDown" label="BRAKE" className="w-16 h-12 text-xs bg-red-500/30 border-red-400/50" />
+                        <Btn k="ArrowUp" label="GAS" className="w-20 h-24 text-xl bg-green-500/30 border-green-400/50" />
                     </div>
                 </div>
             </div>
@@ -143,287 +57,178 @@ const TouchControls = () => {
     );
 };
 
-const Minimap = () => {
-  const { carPosition, chunks, playerChunkIndex } = useGameStore();
-
-  const pathData = useMemo(() => {
-    let d = "";
-    // Only show nearby chunks on minimap
-    const visibleChunks = chunks.filter(c => Math.abs(c.id - playerChunkIndex) < 4);
-
-    visibleChunks.forEach(chunk => {
-        // Sample points from the curve to draw the line
-        const curve = new THREE.CatmullRomCurve3(chunk.controlPoints, false);
-        const points = curve.getPoints(10);
-        
-        points.forEach((p, i) => {
-            // Transform world coordinates to minimap coordinates (relative to car)
-            const relX = (p.x - carPosition.x);
-            const relZ = (p.z - carPosition.z);
-            // Scale down for minimap
-            const sx = relX * 2;
-            const sy = relZ * 2;
-            
-            if (d === "") d += `M ${sx} ${sy}`;
-            else d += ` L ${sx} ${sy}`;
-        });
-    });
-
-    return d;
-  }, [chunks, carPosition, playerChunkIndex]);
-
-  return (
-    <div className="absolute top-4 left-4 w-24 h-24 md:w-48 md:h-48 bg-black/40 rounded-full border-2 border-white/20 backdrop-blur-md overflow-hidden shadow-lg flex items-center justify-center z-10 hidden sm:flex">
-        <svg 
-            width="100%" 
-            height="100%" 
-            viewBox="-150 -150 300 300"
-            className="w-full h-full opacity-80"
-            style={{ transform: 'rotate(180deg)' }} 
-        >
-            <circle cx="0" cy="0" r="50" stroke="white" strokeWidth="0.5" fill="none" opacity="0.2"/>
-            <circle cx="0" cy="0" r="100" stroke="white" strokeWidth="0.5" fill="none" opacity="0.2"/>
-            {/* Track Path */}
-            <path d={pathData} stroke="#ffffff" strokeWidth="20" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.8" />
-            {/* Player Dot */}
-            <circle cx="0" cy="0" r="8" fill="#ffff00" stroke="black" strokeWidth="2" />
-        </svg>
-        <div className="absolute top-4 text-xs text-white/50 font-bold font-mono">RADAR</div>
-    </div>
-  );
-};
-
-function HUD() {
+const HUD = () => {
   const { 
-      status, score, bestScore, speed, startGame, resetGame, togglePause,
+      status, score, bestScore, speed, timeRemaining, startGame, resetGame, togglePause,
       currentQuestion, feedbackMessage, boostTimer, penaltyTimer,
       selectedLessonIds, toggleLesson, competitors, playerRank
   } = useGameStore(state => {
-      // Memoize rank calculation here or in store selector if possible, 
-      // but simplistic recalc in component is okay for small N
       const playerTotalProgress = state.playerChunkIndex + state.playerProgress;
-      let rank = 1;
-      state.competitors.forEach(comp => {
-          if ((comp.chunkId + comp.progress) > playerTotalProgress) rank++;
-      });
+      let rank = 1; state.competitors.forEach(comp => { if ((comp.chunkId + comp.progress) > playerTotalProgress) rank++; });
       return { ...state, playerRank: rank };
   });
 
   const [isMuted, setIsMuted] = useState(soundManager.getMuteState());
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-          if (e.key === 'Escape') {
-              togglePause();
-          }
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
+      const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') togglePause(); };
+      window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
   }, [togglePause]);
 
-  const toggleSound = () => {
-    const muted = soundManager.toggleMute();
-    setIsMuted(muted);
-  };
+  const toggleSound = () => setIsMuted(soundManager.toggleMute());
   
+  const handleSpeak = async () => {
+      if (isSpeaking) return;
+      setIsSpeaking(true);
+      soundManager.playSfx('correct'); // Immediate feedback sound
+      
+      // Construct the full word for natural reading
+      // Replace the Zhuyin part (e.g., 「ㄌㄜˋ」) with the correct answer (e.g., 垃)
+      // Also strip parentheses like (物品)
+      const correctAnswer = currentQuestion.options[currentQuestion.correctIndex];
+      const wordToSpeak = currentQuestion.question
+          .replace(/「[^」]+」/g, correctAnswer)
+          .replace(/\([^\)]+\)/g, '');
+
+      try {
+          await soundManager.speak(wordToSpeak);
+      } catch (e) {
+          console.error("Speech failed", e);
+      } finally {
+          setIsSpeaking(false);
+      }
+  };
+
   const currentSpeedKmH = Math.floor(Math.abs(speed * 200));
   const speedPercent = Math.min(100, (currentSpeedKmH / 120) * 100);
 
-  return (
-    <div className="absolute inset-0 pointer-events-none p-4 md:p-6">
-      
-      {/* Top Left: Minimap */}
-      <Minimap />
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
-      {/* Top Center: Quiz Question Box */}
+  const isRacingOrPaused = status === GameStatus.RACING || status === GameStatus.PAUSED;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none p-4 md:p-6 h-[100dvh]">
+      
+      {/* Top Left: Rank */}
       {status === GameStatus.RACING && (
+        <div className="absolute top-4 left-4 z-20 flex flex-col items-start gap-2 scale-[0.8] origin-top-left md:scale-100">
+            <div className="bg-black/70 p-2 md:px-4 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col items-start shadow-lg">
+                <div className="text-[10px] md:text-sm text-gray-400 font-mono">RANK</div>
+                <div className="text-2xl md:text-3xl font-bold text-white font-mono">
+                    <span className="text-yellow-400">{playerRank}</span><span className="text-base text-gray-500">/{competitors.length + 1}</span>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Top Center: Quiz (Clickable for Narration) */}
+      {isRacingOrPaused && (
         <div className="absolute top-4 landscape:top-2 left-1/2 -translate-x-1/2 flex justify-center z-20 w-full px-4 pointer-events-none scale-[0.85] origin-top md:scale-100">
-          <div className="bg-black/80 border-2 border-yellow-400 rounded-xl p-2 md:p-4 w-full max-w-[320px] md:max-w-[400px] text-center backdrop-blur-md shadow-2xl pointer-events-auto landscape:w-auto landscape:max-w-none landscape:flex landscape:items-center landscape:gap-4 landscape:bg-black/60 landscape:rounded-full landscape:border-white/30">
-              <div className="text-gray-400 text-[10px] md:text-xs uppercase tracking-widest mb-1 landscape:hidden">Current Challenge</div>
-              <div className="text-xl md:text-3xl font-bold text-white landscape:text-xl landscape:mb-0 whitespace-nowrap">
-                  {currentQuestion.question}
+          <div 
+            onClick={handleSpeak}
+            className={`group cursor-pointer bg-black/80 border-2 ${isSpeaking ? 'border-orange-500 shadow-[0_0_20px_orange]' : 'border-yellow-400'} rounded-xl p-2 md:p-4 w-full max-w-[320px] md:max-w-[400px] text-center backdrop-blur-md shadow-2xl pointer-events-auto landscape:w-auto landscape:max-w-none landscape:flex landscape:items-center landscape:gap-4 landscape:bg-black/60 landscape:rounded-full landscape:border-white/30 active:scale-95 transition-all duration-200`}
+          >
+              <div className="text-xl md:text-3xl font-bold text-white landscape:text-xl landscape:mb-0 whitespace-nowrap flex items-center justify-center gap-2">
+                {isSpeaking ? <span className="animate-pulse text-orange-400">朗讀中...</span> : currentQuestion.question}
+                {!isSpeaking && <span className="inline-block text-xs text-yellow-400 opacity-50 group-hover:opacity-100 transition-opacity">🔊</span>}
               </div>
               <div className="flex justify-center gap-2 md:gap-4 mt-2 landscape:mt-0 text-xs md:text-sm text-yellow-200">
-                  {currentQuestion.options.map((opt, i) => (
-                      <span key={i} className="bg-white/10 px-2 py-1 landscape:py-0.5 rounded border border-white/10 whitespace-nowrap">{opt}</span>
-                  ))}
+                  {currentQuestion.options.map((opt, i) => <span key={i} className="bg-white/10 px-2 py-1 landscape:py-0.5 rounded border border-white/10 whitespace-nowrap">{opt}</span>)}
               </div>
           </div>
         </div>
       )}
 
-      {/* Top Right: Score & Settings */}
+      {/* Top Right: Timer, Score, Settings */}
       <div className="absolute top-4 right-4 md:top-6 md:right-6 flex flex-col items-end font-mono text-white gap-2 z-10 scale-[0.8] origin-top-right md:scale-100">
-        
-        {/* Buttons Group */}
         <div className="flex gap-2 mb-2">
-            <button 
-                onClick={togglePause}
-                className="pointer-events-auto bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-colors text-xl"
-            >
-                {status === GameStatus.PAUSED ? '▶️' : '⏸️'}
-            </button>
-            <button 
-                onClick={toggleSound}
-                className="pointer-events-auto bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-colors text-xl"
-            >
-                {isMuted ? '🔇' : '🔊'}
-            </button>
+            <button onClick={togglePause} className="pointer-events-auto bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-colors text-xl">{status === GameStatus.PAUSED ? '▶️' : '⏸️'}</button>
+            <button onClick={toggleSound} className="pointer-events-auto bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-colors text-xl">{isMuted ? '🔇' : '🔊'}</button>
         </div>
 
-        {status === GameStatus.RACING && (
+        {isRacingOrPaused && (
              <div className="bg-black/70 p-2 md:px-4 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col items-end shadow-lg mb-2">
-                <div className="text-[10px] md:text-sm text-gray-400">POS</div>
-                <div className="text-2xl md:text-3xl font-bold text-white">
-                    <span className="text-yellow-400">{playerRank}</span><span className="text-base text-gray-500">/{competitors.length + 1}</span>
+                <div className="text-[10px] md:text-sm text-gray-400">TIME LEFT</div>
+                <div className={`text-2xl md:text-3xl font-bold ${timeRemaining < 30 ? 'text-red-400 animate-pulse' : 'text-white'}`}>
+                    {formatTime(timeRemaining)}
                 </div>
             </div>
         )}
 
         <div className="bg-black/70 p-2 md:p-4 rounded-xl border border-white/20 backdrop-blur-sm flex flex-col items-end shadow-lg min-w-[100px] md:min-w-[150px]">
           <div className="text-[10px] md:text-sm text-gray-400">DISTANCE</div>
-          <div className="text-2xl md:text-4xl font-bold text-yellow-400">
-            {score}<span className="text-sm md:text-lg text-gray-500 ml-1">m</span>
-          </div>
+          <div className="text-2xl md:text-4xl font-bold text-yellow-400">{score}<span className="text-sm md:text-lg text-gray-500 ml-1">m</span></div>
         </div>
-
-        {bestScore > 0 && (
-            <div className="bg-black/70 px-3 py-1 rounded-lg border border-white/10 text-right backdrop-blur-sm">
-                <span className="text-[10px] md:text-xs text-gray-400 mr-2">BEST</span>
-                <span className="text-sm md:text-lg font-bold text-white">{bestScore}m</span>
-            </div>
-        )}
       </div>
 
-      {/* Center: Feedback & Menus */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-auto z-30">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
         {feedbackMessage && status === GameStatus.RACING && (
-            <div className={`
-                fixed top-24 landscape:top-16 animate-pulse text-lg md:text-2xl font-black py-2 px-8 rounded-full border-2 shadow-2xl z-40
-                ${feedbackMessage.includes('CORRECT') ? 'bg-green-600/90 text-white border-green-300' : 'bg-red-600/90 text-white border-red-300'}
-            `}>
-                {feedbackMessage}
-            </div>
+            <div className={`fixed top-24 landscape:top-16 animate-pulse text-lg md:text-2xl font-black py-2 px-8 rounded-full border-2 shadow-2xl z-40 ${feedbackMessage.includes('對') ? 'bg-green-600/90 text-white border-green-300' : 'bg-red-600/90 text-white border-red-300'}`}> {feedbackMessage} </div>
         )}
 
         {status === GameStatus.IDLE && (
-          <div className="bg-black/80 p-4 md:p-8 rounded-2xl text-center border-2 border-yellow-500 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-300 w-[95%] max-w-3xl max-h-[90dvh] overflow-y-auto custom-scrollbar">
-            <h1 className="text-3xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-2 tracking-tighter italic">
-              POLY KART QUIZ
-            </h1>
-            <p className="text-gray-400 mb-4 md:mb-8 font-mono text-sm tracking-widest">ARCADE RACING & LEARNING</p>
-            
+          <div className="bg-black/80 p-4 md:p-8 rounded-2xl text-center border-2 border-yellow-500 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-300 w-[95%] max-w-3xl max-h-[90dvh] overflow-y-auto custom-scrollbar pointer-events-auto">
+            <h1 className="text-3xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500 mb-2 tracking-tighter italic">POLY KART RACING</h1>
+            <p className="text-gray-400 mb-4 md:mb-8 font-mono text-sm tracking-widest uppercase">Drive Far & Learn in 3 Minutes</p>
             <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-4 md:mb-8 text-left">
                 <div className="flex-1 bg-white/5 rounded-xl p-4 md:p-5 border border-white/10">
                     <h3 className="text-yellow-400 font-bold mb-3 text-sm uppercase tracking-wide border-b border-white/10 pb-2">1. Select Lessons</h3>
                     <div className="grid grid-cols-1 gap-2 max-h-32 md:max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         {Object.values(LESSON_CATALOG).map(lesson => (
-                            <button
-                                key={lesson.id}
-                                onClick={() => toggleLesson(lesson.id)}
-                                className={`
-                                    text-left px-3 py-2 rounded-md border transition-all flex justify-between items-center text-sm
-                                    ${selectedLessonIds.includes(lesson.id) 
-                                        ? 'bg-yellow-500/20 border-yellow-500 text-white' 
-                                        : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}
-                                `}
-                            >
-                                <span className="font-bold">{lesson.title}</span>
-                                {selectedLessonIds.includes(lesson.id) && <span className="text-yellow-400">✓</span>}
+                            <button key={lesson.id} onClick={() => toggleLesson(lesson.id)} className={`text-left px-3 py-2 rounded-md border transition-all flex justify-between items-center text-sm ${selectedLessonIds.includes(lesson.id) ? 'bg-yellow-500/20 border-yellow-500 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}>
+                                <span className="font-bold">{lesson.title}</span> {selectedLessonIds.includes(lesson.id) && <span className="text-yellow-400">✓</span>}
                             </button>
                         ))}
                     </div>
                 </div>
-
-                <div className="flex-1 flex flex-col gap-4">
-                    <div className="bg-white/5 rounded-xl p-4 md:p-5 border border-white/10 flex-1">
-                        <h3 className="text-yellow-400 font-bold mb-3 text-sm uppercase tracking-wide border-b border-white/10 pb-2">2. How to Play</h3>
-                        <ul className="text-gray-300 text-sm space-y-2">
-                            <li>🏁 <b>Race</b> through infinite tracks.</li>
-                            <li>❓ <b>Drive</b> into the correct answer box.</li>
-                            <li>⚡ <b>Correct</b> = Turbo Boost!</li>
-                            <li>🐢 <b>Wrong</b> = Speed Penalty.</li>
-                            <li>🏎️ <b>Drift</b> (Shift) to clear sharp turns.</li>
-                        </ul>
-                    </div>
-                </div>
             </div>
-
-            <button 
-              onClick={startGame}
-              disabled={selectedLessonIds.length === 0}
-              className={`
-                w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black py-3 md:py-4 px-8 rounded-xl text-xl md:text-2xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-yellow-500/20
-                ${selectedLessonIds.length === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}
-              `}
-            >
-              START ENGINE
-            </button>
+            <button onClick={startGame} disabled={selectedLessonIds.length === 0} className={`w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-black font-black py-3 md:py-4 px-8 rounded-xl text-xl md:text-2xl transition-all hover:scale-105 active:scale-95 shadow-lg shadow-yellow-500/20 ${selectedLessonIds.length === 0 ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}> START ENGINE </button>
           </div>
         )}
 
         {(status === GameStatus.FINISHED || status === GameStatus.PAUSED) && (
-          <div className="bg-black/90 p-8 rounded-2xl text-center border border-white/20 shadow-2xl backdrop-blur-xl min-w-[300px]">
-            <h1 className="text-4xl font-bold text-white mb-2 tracking-wider">
-                {status === GameStatus.PAUSED ? 'PAUSED' : 'GAME OVER'}
-            </h1>
+          <div className="bg-black/90 p-8 rounded-2xl text-center border border-white/20 shadow-2xl backdrop-blur-xl min-w-[300px] pointer-events-auto">
+            <h1 className="text-4xl font-bold text-white mb-2 tracking-wider">{status === GameStatus.PAUSED ? 'PAUSED' : 'TIME UP!'}</h1>
             <div className="py-6 my-4 border-y border-white/10">
-                <div className="text-gray-400 text-sm mb-1">CURRENT RUN</div>
+                <div className="text-gray-400 text-sm mb-1">TOTAL DISTANCE</div>
                 <div className="text-white text-5xl font-mono font-bold text-yellow-400">{score}m</div>
             </div>
-            
             <div className="flex flex-col gap-3">
-                {status === GameStatus.PAUSED && (
-                     <button 
-                        onClick={togglePause}
-                        className="bg-white hover:bg-gray-200 text-black font-bold py-3 px-8 rounded-xl text-lg transition-all"
-                    >
-                        RESUME
-                    </button>
-                )}
-                <button 
-                    onClick={resetGame}
-                    className="bg-transparent hover:bg-white/10 text-white border-2 border-white/30 font-bold py-3 px-8 rounded-xl text-lg transition-all"
-                >
-                    {status === GameStatus.PAUSED ? 'QUIT TO MENU' : 'RESTART'}
-                </button>
+                {status === GameStatus.PAUSED && <button onClick={togglePause} className="bg-white hover:bg-gray-200 text-black font-bold py-3 px-8 rounded-xl text-lg transition-all">RESUME</button>}
+                <button onClick={resetGame} className="bg-transparent hover:bg-white/10 text-white border-2 border-white/30 font-bold py-3 px-8 rounded-xl text-lg transition-all">QUIT TO MENU</button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Touch Controls (Mobile Only) */}
       {status === GameStatus.RACING && <TouchControls />}
 
-      {/* Speedometer - Scaled down on mobile and pushed up */}
-      <div className="absolute bottom-12 landscape:bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-10 pointer-events-none scale-[0.75] origin-bottom md:scale-100">
-        <div className="flex gap-2 items-center mb-1">
-            {boostTimer > 0 && <div className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded animate-pulse shadow-[0_0_10px_orange]">NITRO</div>}
-            {penaltyTimer > 0 && <div className="bg-gray-500 text-white text-xs font-bold px-2 py-0.5 rounded shadow-[0_0_10px_gray]">STALL</div>}
-        </div>
-        <div className="relative w-48 h-24 md:w-64 md:h-32 bg-gradient-to-t from-black/90 to-transparent rounded-t-full border-t-2 border-white/20 overflow-hidden backdrop-blur-sm">
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[90%] h-[90%] border-t-[15px] md:border-t-[20px] border-l-[15px] md:border-l-[20px] border-r-[15px] md:border-r-[20px] border-white/10 rounded-t-full border-b-0"></div>
-            <div 
-                className="absolute bottom-0 left-0 w-full h-full origin-bottom transition-all duration-100 ease-linear opacity-80"
-                style={{
-                    background: `conic-gradient(from 270deg at 50% 100%, transparent 0deg, ${speedPercent > 80 ? 'orange' : '#00ccff'} ${speedPercent * 1.8}deg, transparent 0deg)`
-                }}
-            ></div>
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-center">
-                <div className="text-4xl md:text-5xl font-black text-white italic tracking-tighter shadow-black drop-shadow-lg">
-                    {currentSpeedKmH}
+      {status === GameStatus.RACING && (
+        <div className="absolute bottom-12 landscape:bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-10 pointer-events-none scale-[0.75] origin-bottom md:scale-100">
+            <div className="flex gap-2 items-center mb-1">
+                {boostTimer > 0 && <div className="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded animate-pulse shadow-[0_0_10px_orange]">NITRO</div>}
+                {penaltyTimer > 0 && <div className="bg-gray-500 text-white text-xs font-bold px-2 py-0.5 rounded shadow-[0_0_10px_gray]">STALL</div>}
+            </div>
+            <div className="relative w-48 h-24 md:w-64 md:h-32 bg-gradient-to-t from-black/90 to-transparent rounded-t-full border-t-2 border-white/20 overflow-hidden backdrop-blur-sm">
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-center">
+                    <div className="text-4xl md:text-5xl font-black text-white italic tracking-tighter drop-shadow-lg">{currentSpeedKmH}</div>
+                    <div className="text-[10px] md:text-xs font-bold text-gray-400">KM/H</div>
                 </div>
-                <div className="text-[10px] md:text-xs font-bold text-gray-400">KM/H</div>
             </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 const App: React.FC = () => {
   return (
-    <div className="w-[100dvw] h-[100dvh] relative bg-gray-900 select-none overflow-hidden touch-none">
+    <div className="w-[100dvw] h-[100dvh] relative bg-gray-900 select-none overflow-hidden touch-none touch-action-none">
       <Canvas shadows camera={{ position: [0, 5, 10], fov: 50 }}>
         <color attach="background" args={['#1a1a1a']} />
         <Suspense fallback={null}>
@@ -437,5 +242,4 @@ const App: React.FC = () => {
     </div>
   );
 };
-
 export default App;
