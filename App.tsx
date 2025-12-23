@@ -69,7 +69,6 @@ const HUD = () => {
   });
 
   const [isMuted, setIsMuted] = useState(soundManager.getMuteState());
-  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') togglePause(); };
@@ -78,28 +77,6 @@ const HUD = () => {
 
   const toggleSound = () => setIsMuted(soundManager.toggleMute());
   
-  const handleSpeak = async () => {
-      if (isSpeaking) return;
-      setIsSpeaking(true);
-      soundManager.playSfx('correct'); // Immediate feedback sound
-      
-      // Construct the full word for natural reading
-      // Replace the Zhuyin part (e.g., 「ㄌㄜˋ」) with the correct answer (e.g., 垃)
-      // Also strip parentheses like (物品)
-      const correctAnswer = currentQuestion.options[currentQuestion.correctIndex];
-      const wordToSpeak = currentQuestion.question
-          .replace(/「[^」]+」/g, correctAnswer)
-          .replace(/\([^\)]+\)/g, '');
-
-      try {
-          await soundManager.speak(wordToSpeak);
-      } catch (e) {
-          console.error("Speech failed", e);
-      } finally {
-          setIsSpeaking(false);
-      }
-  };
-
   const currentSpeedKmH = Math.floor(Math.abs(speed * 200));
   const speedPercent = Math.min(100, (currentSpeedKmH / 120) * 100);
 
@@ -126,16 +103,12 @@ const HUD = () => {
         </div>
       )}
 
-      {/* Top Center: Quiz (Clickable for Narration) */}
+      {/* Top Center: Quiz Display */}
       {isRacingOrPaused && (
         <div className="absolute top-4 landscape:top-2 left-1/2 -translate-x-1/2 flex justify-center z-20 w-full px-4 pointer-events-none scale-[0.85] origin-top md:scale-100">
-          <div 
-            onClick={handleSpeak}
-            className={`group cursor-pointer bg-black/80 border-2 ${isSpeaking ? 'border-orange-500 shadow-[0_0_20px_orange]' : 'border-yellow-400'} rounded-xl p-2 md:p-4 w-full max-w-[320px] md:max-w-[400px] text-center backdrop-blur-md shadow-2xl pointer-events-auto landscape:w-auto landscape:max-w-none landscape:flex landscape:items-center landscape:gap-4 landscape:bg-black/60 landscape:rounded-full landscape:border-white/30 active:scale-95 transition-all duration-200`}
-          >
+          <div className={`bg-black/80 border-2 border-yellow-400 rounded-xl p-2 md:p-4 w-full max-w-[320px] md:max-w-[400px] text-center backdrop-blur-md shadow-2xl landscape:w-auto landscape:max-w-none landscape:flex landscape:items-center landscape:gap-4 landscape:bg-black/60 landscape:rounded-full landscape:border-white/30 transition-all duration-200`}>
               <div className="text-xl md:text-3xl font-bold text-white landscape:text-xl landscape:mb-0 whitespace-nowrap flex items-center justify-center gap-2">
-                {isSpeaking ? <span className="animate-pulse text-orange-400">朗讀中...</span> : currentQuestion.question}
-                {!isSpeaking && <span className="inline-block text-xs text-yellow-400 opacity-50 group-hover:opacity-100 transition-opacity">🔊</span>}
+                {currentQuestion.question}
               </div>
               <div className="flex justify-center gap-2 md:gap-4 mt-2 landscape:mt-0 text-xs md:text-sm text-yellow-200">
                   {currentQuestion.options.map((opt, i) => <span key={i} className="bg-white/10 px-2 py-1 landscape:py-0.5 rounded border border-white/10 whitespace-nowrap">{opt}</span>)}
@@ -147,8 +120,8 @@ const HUD = () => {
       {/* Top Right: Timer, Score, Settings */}
       <div className="absolute top-4 right-4 md:top-6 md:right-6 flex flex-col items-end font-mono text-white gap-2 z-10 scale-[0.8] origin-top-right md:scale-100">
         <div className="flex gap-2 mb-2">
-            <button onClick={togglePause} className="pointer-events-auto bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-colors text-xl">{status === GameStatus.PAUSED ? '▶️' : '⏸️'}</button>
-            <button onClick={toggleSound} className="pointer-events-auto bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-colors text-xl">{isMuted ? '🔇' : '🔊'}</button>
+            <button onClick={togglePause} className="pointer-events-auto bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-colors text-xl text-white">{status === GameStatus.PAUSED ? '▶️' : '⏸️'}</button>
+            <button onClick={toggleSound} className="pointer-events-auto bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full border border-white/20 flex items-center justify-center transition-colors text-xl text-white">{isMuted ? '🔇' : '🔊'}</button>
         </div>
 
         {isRacingOrPaused && (

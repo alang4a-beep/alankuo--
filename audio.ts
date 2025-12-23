@@ -1,6 +1,4 @@
 
-import { GoogleGenAI, Modality } from "@google/genai";
-
 export const SOUNDS = {
     bgm: 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3',
     engine: 'engine',
@@ -30,7 +28,6 @@ class SoundManager {
         if (this.initialized) return;
         try {
             const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-            // Create context without fixed sampleRate to avoid hardware compatibility issues
             this.ctx = new AudioContextClass();
             this.masterGain = this.ctx.createGain();
             this.masterGain.connect(this.ctx.destination);
@@ -121,63 +118,6 @@ class SoundManager {
         this.engineOsc2.frequency.setTargetAtTime(targetFreq / 2, this.ctx.currentTime, 0.1); 
         const targetVol = 0.02 + (r * 0.04);
         this.engineGain.gain.setTargetAtTime(targetVol, this.ctx.currentTime, 0.1);
-    }
-
-    async speak(text: string) {
-        this.resume();
-        if (this.isMuted || !this.ctx || !process.env.API_KEY) return;
-        
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash-preview-tts',
-                contents: [{ parts: [{ text: `請用流利的繁體中文朗讀：${text}` }] }],
-                config: {
-                    responseModalities: [Modality.AUDIO],
-                    speechConfig: {
-                        voiceConfig: {
-                            prebuiltVoiceConfig: { voiceName: 'Kore' }
-                        }
-                    }
-                }
-            });
-
-            const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-            if (base64Audio) {
-                const audioData = this.decode(base64Audio);
-                // Gemini TTS outputs PCM at 24000Hz
-                const audioBuffer = await this.decodeAudioData(audioData, this.ctx, 24000, 1);
-                const source = this.ctx.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(this.masterGain!);
-                source.start();
-            }
-        } catch (e) {
-            console.error("Speech Generation failed:", e);
-        }
-    }
-
-    private decode(base64: string) {
-        const binaryString = atob(base64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        return bytes;
-    }
-
-    private async decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> {
-        const dataInt16 = new Int16Array(data.buffer);
-        const frameCount = dataInt16.length / numChannels;
-        const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-
-        for (let channel = 0; channel < numChannels; channel++) {
-            const channelData = buffer.getChannelData(channel);
-            for (let i = 0; i < frameCount; i++) {
-                channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-            }
-        }
-        return buffer;
     }
 
     playSfx(key: string) {

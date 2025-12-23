@@ -76,7 +76,7 @@ export const LESSON_CATALOG: Record<string, LessonData> = {
         { id: 401, question: "「ㄍㄨˇ」老", options: ["骨", "股", "古"], correctIndex: 2 },
         { id: 402, question: "「ㄉㄨㄥˇ」事", options: ["董", "懂", "孔"], correctIndex: 1 },
         { id: 403, question: "鄰「ㄐㄩ」", options: ["居", "拘", "車"], correctIndex: 0 },
-        { id: 404, question: "一「ㄑㄩㄣˊ」", options: ["裙", "群", "羣"], correctIndex: 1 },
+        { id: 404, question: "一「ㄑㄩ裙」", options: ["裙", "群", "羣"], correctIndex: 1 },
         { id: 405, question: "節「ㄕㄥˇ」", options: ["省", "審", "眚"], correctIndex: 0 },
         { id: 406, question: "浪「ㄈㄟˋ」", options: ["費", "廢", "肺"], correctIndex: 0 },
         { id: 407, question: "「ㄕㄤ」店", options: ["商", "傷", "湯"], correctIndex: 0 },
@@ -199,7 +199,7 @@ export const LESSON_CATALOG: Record<string, LessonData> = {
         { id: 1102, question: "大「ㄕㄣˇ」", options: ["審", "沈", "嬸"], correctIndex: 2 },
         { id: 1103, question: "抽「ㄧㄢ」", options: ["菸", "煙", "淹"], correctIndex: 1 },
         { id: 1104, question: "鞭「ㄆㄠˋ」", options: ["泡", "炮", "跑"], correctIndex: 1 },
-        { id: 1105, question: "「ㄈㄨˋ」近", options: ["副", "附", "付"], correctIndex: 1 },
+        { id: 1105, question: "「ㄈㄨˋ」近", options: ["附", "附", "付"], correctIndex: 1 },
         { id: 1106, question: "商「ㄉㄧㄢˋ」", options: ["殿", "店", "墊"], correctIndex: 1 },
         { id: 1107, question: "休「ㄒㄧˊ」", options: ["息", "席", "習"], correctIndex: 0 },
         { id: 1108, question: "「ㄒㄧㄡ」理", options: ["休", "修", "羞"], correctIndex: 1 },
@@ -534,13 +534,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   startGame: () => {
-    // 1. Prepare Question Pool
     const { selectedLessonIds } = get();
     let pool: QuizQuestion[] = [];
     selectedLessonIds.forEach(id => { if (LESSON_CATALOG[id]) pool = [...pool, ...LESSON_CATALOG[id].questions]; });
     if (pool.length === 0) pool = LESSON_CATALOG['L1'].questions;
     
-    // 2. Clear Timers and State
     set({ 
         activeQuestions: pool, 
         timeRemaining: 180, 
@@ -552,10 +550,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         competitors: []
     });
 
-    // 3. Rebuild Track with pool
     get().generateInitialTrack();
     
-    // 4. Trigger Hardware (Sound)
     try {
         soundManager.resume();
         soundManager.startMusic();
@@ -565,7 +561,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         console.warn("Hardware initialization skipped:", e);
     }
     
-    // 5. Final State Switch
     set({ status: GameStatus.RACING });
   },
 
@@ -671,7 +666,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setCarPosition: (x, z, chunkIndex, progressInChunk) => {
-    const { chunks, playerChunkIndex, bestScore, bonusScore, status, lastSpokenQuestionId, activeQuestions } = get();
+    const { chunks, playerChunkIndex, bestScore, bonusScore, status, activeQuestions } = get();
     const distScore = Math.floor((chunkIndex * CHUNK_LENGTH) + (progressInChunk * CHUNK_LENGTH));
     const totalScore = distScore + bonusScore;
     if (totalScore > bestScore) localStorage.setItem('polykart-best', totalScore.toString());
@@ -697,13 +692,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
     
     const nextQuestion = nextQuizChunk?.assignedQuestion || get().currentQuestion;
-    
-    if (nextQuestion && nextQuestion.id !== lastSpokenQuestionId && status === GameStatus.RACING) {
-        const correctAnswer = nextQuestion.options[nextQuestion.correctIndex];
-        const wordToSpeak = nextQuestion.question.replace(/「[^」]+」/g, correctAnswer).replace(/\([^\)]+\)/g, '');
-        soundManager.speak(wordToSpeak);
-        set({ lastSpokenQuestionId: nextQuestion.id });
-    }
 
     set({ carPosition: { x, z }, chunks: newChunks, playerChunkIndex: newPlayerChunkIndex, playerProgress: progressInChunk, score: totalScore, bestScore: Math.max(bestScore, totalScore), currentQuestion: nextQuestion });
   },
