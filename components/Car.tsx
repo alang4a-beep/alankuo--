@@ -546,8 +546,11 @@ export const Car: React.FC = () => {
     const maxFovBoost = isMobile ? 8 : 12;
     const targetFov = baseFov + (speedRatio * maxFovBoost); 
     
-    camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.1);
-    camera.updateProjectionMatrix();
+    // Check if camera is a PerspectiveCamera before accessing fov or updateProjectionMatrix
+    if (camera instanceof THREE.PerspectiveCamera) {
+      camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.1);
+      camera.updateProjectionMatrix();
+    }
 
     const camRotation = new THREE.Euler(0, courseRotation.current, 0); 
     const camY = Math.max(baseCamHeight, baseCamHeight + position.current.y * 0.8); 

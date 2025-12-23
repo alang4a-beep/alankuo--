@@ -46,7 +46,7 @@ export const LESSON_CATALOG: Record<string, LessonData> = {
         { id: 205, question: "作「ㄧㄝˋ」", options: ["葉", "業", "夜"], correctIndex: 1 },
         { id: 206, question: "中「ㄨˇ」", options: ["五", "午", "舞"], correctIndex: 1 },
         { id: 207, question: "「ㄅㄧㄥˋ」且", options: ["並", "病", "柄"], correctIndex: 0 },
-        { id: 208, question: "「ㄊㄧˊ」醒", options: ["題", "提", "蹄"], correctIndex: 1 },
+        { id: 208, question: "「ㄊㄧˊ」提醒", options: ["題", "提", "蹄"], correctIndex: 1 },
         { id: 209, question: "叫「ㄒㄧㄥˇ」", options: ["省", "醒", "擤"], correctIndex: 1 },
         { id: 210, question: "「ㄊㄨㄛ」地", options: ["脫", "拖", "托"], correctIndex: 1 },
         { id: 211, question: "「ㄇㄧˋ」蜂", options: ["密", "蜜", "秘"], correctIndex: 1 },
@@ -92,14 +92,14 @@ export const LESSON_CATALOG: Record<string, LessonData> = {
     'L5': { id: 'L5', title: '第 5 課', questions: [
         { id: 501, question: "「ㄊㄧㄝ」紙", options: ["貼", "帖", "鐵"], correctIndex: 0 },
         { id: 502, question: "今「ㄋㄧㄢˊ」", options: ["黏", "年", "連"], correctIndex: 1 },
-        { id: 503, question: "年「ㄐㄧˊ」", options: ["級", "極", "即"], correctIndex: 2 },
+        { id: 503, question: "年「ㄐㄧˊ」", options: ["級", "極", "即"], correctIndex: 0 },
         { id: 504, question: "「ㄕˇ」用", options: ["使", "史", "駛"], correctIndex: 0 },
         { id: 505, question: "「ㄏㄜˊ」作", options: ["和", "合", "河"], correctIndex: 1 },
         { id: 506, question: "「ㄙㄨㄟˊ」便", options: ["隨", "隋", "髓"], correctIndex: 0 },
         { id: 507, question: "「ㄍㄜˊ」壁", options: ["隔", "革", "格"], correctIndex: 0 },
         { id: 508, question: "「ㄕㄨㄟˋ」覺", options: ["說", "稅", "睡"], correctIndex: 2 },
-        { id: 509, question: "「ㄒㄧㄠˋ」果", options: ["笑", "校", "效"], correctIndex: 1 },
-        { id: 510, question: "順「ㄒㄩˋ」", options: ["續", "序", "敘"], correctIndex: 0 },
+        { id: 509, question: "「ㄒㄧㄠˋ」果", options: ["笑", "校", "效"], correctIndex: 2 },
+        { id: 510, question: "順「ㄒㄩˋ」", options: ["續", "序", "敘"], correctIndex: 1 },
         { id: 511, question: "「ㄦˊ」且", options: ["而", "兒", "耳"], correctIndex: 0 },
         { id: 512, question: "並「ㄑㄧㄝˇ」", options: ["且", "切", "茄"], correctIndex: 0 },
         { id: 513, question: "「ㄆㄞˊ」隊", options: ["排", "牌", "徘"], correctIndex: 0 },
@@ -112,7 +112,7 @@ export const LESSON_CATALOG: Record<string, LessonData> = {
         { id: 603, question: "「ㄓˋ」造", options: ["治", "製", "智"], correctIndex: 1 },
         { id: 604, question: "「ㄅㄨˋ」分", options: ["部", "步", "布"], correctIndex: 0 },
         { id: 605, question: "「ㄏㄨㄣˋ」合", options: ["混", "渾", "婚"], correctIndex: 0 },
-        { id: 606, question: "折「ㄉㄨㄢˋ」", options: ["緞", "段", "斷"], correctIndex: 1 },
+        { id: 606, question: "折「ㄉㄨㄢˋ」", options: ["緞", "段", "斷"], correctIndex: 2 },
         { id: 607, question: "「ㄐㄧㄝˇ」釋", options: ["姐", "解", "結"], correctIndex: 1 },
         { id: 608, question: "飛「ㄐㄧ」", options: ["雞", "基", "機"], correctIndex: 2 },
         { id: 609, question: "機「ㄑㄧˋ」", options: ["器", "氣", "汽"], correctIndex: 0 },
@@ -205,7 +205,7 @@ export const LESSON_CATALOG: Record<string, LessonData> = {
         { id: 1108, question: "「ㄒㄧㄡ」理", options: ["休", "修", "羞"], correctIndex: 1 },
         { id: 1109, question: "工「ㄔㄤˇ」", options: ["場", "廠", "長"], correctIndex: 1 },
         { id: 1110, question: "「ㄏㄨㄞˋ」掉", options: ["壞", "懷", "畫"], correctIndex: 0 },
-        { id: 1111, question: "檢「ㄔㄚˊ」", options: ["茶", "察", "查"], correctIndex: 1 },
+        { id: 1111, question: "檢「ㄔㄚˊ」", options: ["茶", "察", "查"], correctIndex: 2 },
         { id: 1112, question: "「ㄅㄞˇ」放", options: ["擺", "百", "柏"], correctIndex: 0 },
         { id: 1113, question: "「ㄒㄧㄥˋ」福", options: ["性", "姓", "幸"], correctIndex: 2 },
         { id: 1114, question: "「ㄌㄧㄥˊ」食", options: ["零", "鈴", "靈"], correctIndex: 0 },
@@ -265,11 +265,9 @@ interface GameState {
 
 let nextChunkId = 0;
 
-const getRandomQuestion = (): QuizQuestion => {
-    const activeQuestions = useGameStore.getState().activeQuestions;
-    // Fallback if pool is empty
-    if (activeQuestions.length === 0) return LESSON_CATALOG['L1'].questions[0]; 
-    return activeQuestions[Math.floor(Math.random() * activeQuestions.length)];
+const getRandomQuestion = (pool: QuizQuestion[]): QuizQuestion => {
+    if (pool.length === 0) return LESSON_CATALOG['L1'].questions[0]; 
+    return pool[Math.floor(Math.random() * pool.length)];
 };
 
 const checkCollision = (points: Vector3[], history: TrackChunkData[]): boolean => {
@@ -289,7 +287,7 @@ const checkCollision = (points: Vector3[], history: TrackChunkData[]): boolean =
     return false;
 };
 
-const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChunkData[]): TrackChunkData => {
+const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChunkData[], questionPool: QuizQuestion[]): TrackChunkData => {
   const id = nextChunkId++;
   const isQuizChunk = id > 4 && id % 10 === 0;
   const isPreQuizChunk = (id + 1) > 4 && (id + 1) % 10 === 0;
@@ -396,7 +394,7 @@ const createChunk = (prevChunk: TrackChunkData | null, existingChunks: TrackChun
   let assignedQuestion: QuizQuestion | undefined;
 
   if (isQuizChunk) {
-      assignedQuestion = getRandomQuestion();
+      assignedQuestion = getRandomQuestion(questionPool);
       const midIndex = Math.floor(points.length / 2);
       const midPoint = points[midIndex];
       const curveForTangent = new CatmullRomCurve3(points, false);
@@ -475,7 +473,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   playerChunkIndex: 0,
   playerProgress: 0,
   selectedLessonIds: JSON.parse(localStorage.getItem('polykart-lessons') || '["L1"]'),
-  activeQuestions: [], // Will be populated in generateInitialTrack/startGame
+  activeQuestions: [],
   currentQuestion: LESSON_CATALOG['L1'].questions[0],
   lastSpokenQuestionId: null,
   boostTimer: 0,
@@ -485,7 +483,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   generateInitialTrack: () => {
     const { selectedLessonIds } = get();
-    // Pre-populate pool based on selection for seamless start
     let pool: QuizQuestion[] = [];
     selectedLessonIds.forEach(id => { if (LESSON_CATALOG[id]) pool = [...pool, ...LESSON_CATALOG[id].questions]; });
     if (pool.length === 0) pool = LESSON_CATALOG['L1'].questions;
@@ -494,19 +491,34 @@ export const useGameStore = create<GameState>((set, get) => ({
     const chunks: TrackChunkData[] = [];
     let prev: TrackChunkData | null = null;
     
-    // Set active pool BEFORE loop
-    set({ activeQuestions: pool, currentQuestion: pool[0] });
-
-    const first = createChunk(null, []);
-    first.type = ChunkType.STRAIGHT; first.endPoint = new Vector3(0, 0, CHUNK_LENGTH); first.controlPoints = [new Vector3(0,0,0), new Vector3(0,0, CHUNK_LENGTH)]; chunks.push(first);
+    const first = createChunk(null, [], pool);
+    first.type = ChunkType.STRAIGHT; 
+    first.endPoint = new Vector3(0, 0, CHUNK_LENGTH); 
+    first.controlPoints = [new Vector3(0,0,0), new Vector3(0,0, CHUNK_LENGTH)]; 
+    chunks.push(first);
     prev = first;
+
     for (let i = 0; i < CHUNKS_TO_RENDER; i++) {
-      const next = createChunk(prev, chunks);
-      if (prev?.renderPoints && next.controlPoints.length > 1) prev.renderPoints[prev.renderPoints.length - 1] = next.controlPoints[1].clone();
+      const next = createChunk(prev, chunks, pool);
+      if (prev?.renderPoints && next.controlPoints.length > 1) {
+          prev.renderPoints[prev.renderPoints.length - 1] = next.controlPoints[1].clone();
+      }
       chunks.push(next);
       prev = next;
     }
-    set({ chunks, playerChunkIndex: 0, playerProgress: 0, boostTimer: 0, penaltyTimer: 0, bonusScore: 0, competitors: [], lastSpokenQuestionId: null });
+
+    set({ 
+        chunks, 
+        playerChunkIndex: 0, 
+        playerProgress: 0, 
+        activeQuestions: pool, 
+        currentQuestion: pool[0], 
+        boostTimer: 0, 
+        penaltyTimer: 0, 
+        bonusScore: 0, 
+        competitors: [], 
+        lastSpokenQuestionId: null 
+    });
   },
 
   toggleLesson: (lessonId: string) => {
@@ -522,31 +534,61 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   startGame: () => {
+    // 1. Prepare Question Pool
     const { selectedLessonIds } = get();
     let pool: QuizQuestion[] = [];
     selectedLessonIds.forEach(id => { if (LESSON_CATALOG[id]) pool = [...pool, ...LESSON_CATALOG[id].questions]; });
     if (pool.length === 0) pool = LESSON_CATALOG['L1'].questions;
     
-    set({ activeQuestions: pool, timeRemaining: 180, lastSpokenQuestionId: null, currentQuestion: pool[0] });
+    // 2. Clear Timers and State
+    set({ 
+        activeQuestions: pool, 
+        timeRemaining: 180, 
+        lastSpokenQuestionId: null, 
+        currentQuestion: pool[0],
+        score: 0,
+        bonusScore: 0,
+        speed: 0,
+        competitors: []
+    });
+
+    // 3. Rebuild Track with pool
     get().generateInitialTrack();
     
-    soundManager.resume();
-    soundManager.startMusic();
-    soundManager.startEngine();
-    soundManager.playSfx('boost');
-    set({ status: GameStatus.RACING, score: 0, bonusScore: 0, speed: 0, competitors: [] });
+    // 4. Trigger Hardware (Sound)
+    try {
+        soundManager.resume();
+        soundManager.startMusic();
+        soundManager.startEngine();
+        soundManager.playSfx('boost');
+    } catch (e) {
+        console.warn("Hardware initialization skipped:", e);
+    }
+    
+    // 5. Final State Switch
+    set({ status: GameStatus.RACING });
   },
 
   resetGame: () => {
-    soundManager.stopEngine();
-    soundManager.startMusic();
+    try {
+        soundManager.stopEngine();
+        soundManager.startMusic();
+    } catch (e) {}
     set({ status: GameStatus.IDLE, score: 0, bonusScore: 0, speed: 0, carPosition: { x: 0, z: 0 }, playerChunkIndex: 0, playerProgress: 0, competitors: [], lastSpokenQuestionId: null });
   },
 
   togglePause: () => {
       set(state => {
-          if (state.status === GameStatus.RACING) { soundManager.stopEngine(); soundManager.stopMusic(); return { status: GameStatus.PAUSED }; }
-          else if (state.status === GameStatus.PAUSED) { soundManager.startEngine(); soundManager.startMusic(); return { status: GameStatus.RACING }; }
+          if (state.status === GameStatus.RACING) { 
+              soundManager.stopEngine(); 
+              soundManager.stopMusic(); 
+              return { status: GameStatus.PAUSED }; 
+          }
+          else if (state.status === GameStatus.PAUSED) { 
+              soundManager.startEngine(); 
+              soundManager.startMusic(); 
+              return { status: GameStatus.RACING }; 
+          }
           return {};
       });
   },
@@ -629,7 +671,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setCarPosition: (x, z, chunkIndex, progressInChunk) => {
-    const { chunks, playerChunkIndex, bestScore, bonusScore, status, lastSpokenQuestionId } = get();
+    const { chunks, playerChunkIndex, bestScore, bonusScore, status, lastSpokenQuestionId, activeQuestions } = get();
     const distScore = Math.floor((chunkIndex * CHUNK_LENGTH) + (progressInChunk * CHUNK_LENGTH));
     const totalScore = distScore + bonusScore;
     if (totalScore > bestScore) localStorage.setItem('polykart-best', totalScore.toString());
@@ -639,9 +681,11 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (chunkIndex > playerChunkIndex) {
         newPlayerChunkIndex = chunkIndex;
         const lastChunk = chunks[chunks.length - 1];
-        const next = createChunk(lastChunk, chunks);
+        const next = createChunk(lastChunk, chunks, activeQuestions);
         const updatedLastChunk = { ...lastChunk, renderPoints: [...(lastChunk.renderPoints || [])] };
-        if (updatedLastChunk.renderPoints.length > 0 && next.controlPoints.length > 1) updatedLastChunk.renderPoints[updatedLastChunk.renderPoints.length - 1] = next.controlPoints[1].clone();
+        if (updatedLastChunk.renderPoints.length > 0 && next.controlPoints.length > 1) {
+            updatedLastChunk.renderPoints[updatedLastChunk.renderPoints.length - 1] = next.controlPoints[1].clone();
+        }
         newChunks = [...chunks.slice(0, -1), updatedLastChunk, next];
     }
 
@@ -655,7 +699,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     const nextQuestion = nextQuizChunk?.assignedQuestion || get().currentQuestion;
     
     if (nextQuestion && nextQuestion.id !== lastSpokenQuestionId && status === GameStatus.RACING) {
-        // Construct the full word for auto-speech as well
         const correctAnswer = nextQuestion.options[nextQuestion.correctIndex];
         const wordToSpeak = nextQuestion.question.replace(/「[^」]+」/g, correctAnswer).replace(/\([^\)]+\)/g, '');
         soundManager.speak(wordToSpeak);
