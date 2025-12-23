@@ -60,7 +60,7 @@ const TouchControls = () => {
 const HUD = () => {
   const { 
       status, score, bestScore, speed, timeRemaining, startGame, resetGame, togglePause,
-      currentQuestion, feedbackMessage, boostTimer, penaltyTimer,
+      currentQuestion, wrongQuestions, feedbackMessage, boostTimer, penaltyTimer,
       selectedLessonIds, toggleLesson, competitors, playerRank
   } = useGameStore(state => {
       const playerTotalProgress = state.playerChunkIndex + state.playerProgress;
@@ -165,12 +165,29 @@ const HUD = () => {
         )}
 
         {(status === GameStatus.FINISHED || status === GameStatus.PAUSED) && (
-          <div className="bg-black/90 p-8 rounded-2xl text-center border border-white/20 shadow-2xl backdrop-blur-xl min-w-[300px] pointer-events-auto">
+          <div className={`bg-black/90 p-4 md:p-8 rounded-2xl text-center border border-white/20 shadow-2xl backdrop-blur-xl pointer-events-auto ${status === GameStatus.FINISHED ? 'w-[95%] max-w-md max-h-[90dvh] overflow-y-auto custom-scrollbar' : 'min-w-[300px]'}`}>
             <h1 className="text-4xl font-bold text-white mb-2 tracking-wider">{status === GameStatus.PAUSED ? 'PAUSED' : 'TIME UP!'}</h1>
-            <div className="py-6 my-4 border-y border-white/10">
+            <div className="py-4 my-2 border-y border-white/10">
                 <div className="text-gray-400 text-sm mb-1">TOTAL DISTANCE</div>
                 <div className="text-white text-5xl font-mono font-bold text-yellow-400">{score}m</div>
             </div>
+
+            {status === GameStatus.FINISHED && wrongQuestions.length > 0 && (
+                <div className="mb-6 text-left">
+                    <h3 className="text-red-400 font-bold mb-3 text-sm uppercase tracking-wider flex items-center gap-2">
+                        <span>⚠️ 待複習題目 ({wrongQuestions.length})</span>
+                    </h3>
+                    <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        {wrongQuestions.map((q, idx) => (
+                            <div key={q.id} className="bg-white/5 border border-red-500/30 rounded-lg p-3 text-sm">
+                                <div className="text-gray-300 mb-1">{q.question}</div>
+                                <div className="text-green-400 font-bold">正確解答：{q.options[q.correctIndex]}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col gap-3">
                 {status === GameStatus.PAUSED && <button onClick={togglePause} className="bg-white hover:bg-gray-200 text-black font-bold py-3 px-8 rounded-xl text-lg transition-all">RESUME</button>}
                 <button onClick={resetGame} className="bg-transparent hover:bg-white/10 text-white border-2 border-white/30 font-bold py-3 px-8 rounded-xl text-lg transition-all">QUIT TO MENU</button>

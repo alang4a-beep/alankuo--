@@ -76,7 +76,7 @@ export const LESSON_CATALOG: Record<string, LessonData> = {
         { id: 401, question: "「ㄍㄨˇ」老", options: ["骨", "股", "古"], correctIndex: 2 },
         { id: 402, question: "「ㄉㄨㄥˇ」事", options: ["董", "懂", "孔"], correctIndex: 1 },
         { id: 403, question: "鄰「ㄐㄩ」", options: ["居", "拘", "車"], correctIndex: 0 },
-        { id: 404, question: "一「ㄑㄩ裙」", options: ["裙", "群", "羣"], correctIndex: 1 },
+        { id: 404, question: "一「ㄑㄩㄣˊ」", options: ["裙", "群", "羣"], correctIndex: 1 },
         { id: 405, question: "節「ㄕㄥˇ」", options: ["省", "審", "眚"], correctIndex: 0 },
         { id: 406, question: "浪「ㄈㄟˋ」", options: ["費", "廢", "肺"], correctIndex: 0 },
         { id: 407, question: "「ㄕㄤ」店", options: ["商", "傷", "湯"], correctIndex: 0 },
@@ -156,7 +156,7 @@ export const LESSON_CATALOG: Record<string, LessonData> = {
         { id: 814, question: "「ㄧㄥ」該", options: ["英", "鷹", "應"], correctIndex: 2 },
         { id: 815, question: "屏「ㄇㄨˋ」", options: ["木", "目", "幕"], correctIndex: 2 },
         { id: 816, question: "貝「ㄎㄜˊ」", options: ["殼", "咳", "可"], correctIndex: 0 },
-        { id: 817, question: "「ㄌㄜˋ」圾", options: ["垃", "樂", "勒"], correctIndex: 0 },
+        { id: 817, question: "「ㄌㄧㄥˊ」食", options: ["零", "鈴", "靈"], correctIndex: 0 },
         { id: 818, question: "垃「ㄙㄜˋ」", options: ["澀", "圾", "瑟"], correctIndex: 1 },
         { id: 819, question: "保「ㄏㄨˋ」", options: ["戶", "互", "護"], correctIndex: 2 },
     ]},
@@ -242,6 +242,7 @@ interface GameState {
   selectedLessonIds: string[];
   activeQuestions: QuizQuestion[];
   currentQuestion: QuizQuestion;
+  wrongQuestions: QuizQuestion[];
   lastSpokenQuestionId: number | null;
   boostTimer: number;
   penaltyTimer: number;
@@ -475,6 +476,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   selectedLessonIds: JSON.parse(localStorage.getItem('polykart-lessons') || '["L1"]'),
   activeQuestions: [],
   currentQuestion: LESSON_CATALOG['L1'].questions[0],
+  wrongQuestions: [],
   lastSpokenQuestionId: null,
   boostTimer: 0,
   penaltyTimer: 0,
@@ -544,6 +546,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         timeRemaining: 180, 
         lastSpokenQuestionId: null, 
         currentQuestion: pool[0],
+        wrongQuestions: [],
         score: 0,
         bonusScore: 0,
         speed: 0,
@@ -569,7 +572,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         soundManager.stopEngine();
         soundManager.startMusic();
     } catch (e) {}
-    set({ status: GameStatus.IDLE, score: 0, bonusScore: 0, speed: 0, carPosition: { x: 0, z: 0 }, playerChunkIndex: 0, playerProgress: 0, competitors: [], lastSpokenQuestionId: null });
+    set({ status: GameStatus.IDLE, score: 0, bonusScore: 0, speed: 0, carPosition: { x: 0, z: 0 }, playerChunkIndex: 0, playerProgress: 0, competitors: [], lastSpokenQuestionId: null, wrongQuestions: [] });
   },
 
   togglePause: () => {
@@ -609,13 +612,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   answerQuestion: (isCorrect) => {
+      const { currentQuestion, wrongQuestions } = get();
       if (isCorrect) {
           soundManager.playSfx('correct');
           soundManager.playSfx('boost');
           set({ boostTimer: EFFECT_DURATION, penaltyTimer: 0, feedbackMessage: "答對了！氮氣噴射！" });
       } else {
           soundManager.playSfx('wrong');
-          set({ boostTimer: 0, penaltyTimer: EFFECT_DURATION, feedbackMessage: "答錯了！減速中..." });
+          // Add to wrong questions if not already there
+          const isAlreadyIn = wrongQuestions.some(q => q.id === currentQuestion.id);
+          const nextWrongList = isAlreadyIn ? wrongQuestions : [...wrongQuestions, currentQuestion];
+          set({ boostTimer: 0, penaltyTimer: EFFECT_DURATION, feedbackMessage: "答錯了！減速中...", wrongQuestions: nextWrongList });
       }
       setTimeout(() => set({ feedbackMessage: null }), 2000);
   },
